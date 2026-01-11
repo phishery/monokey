@@ -9,6 +9,7 @@ import { Text } from '../../src/components/ui/Text';
 import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
 import { WordGrid } from '../../src/components/key/WordGrid';
+import { WebQRScanner } from '../../src/components/qr/WebQRScanner';
 import { generateMnemonic, validateMnemonic, getWordList } from '../../src/services/bip39';
 
 // Simple button using TouchableOpacity which works on web
@@ -208,29 +209,27 @@ export default function HomeScreen() {
               variant="outline"
               onPress={handleOpen}
             />
-            {Platform.OS !== 'web' && (
-              <TouchableOpacity
-                onPress={handleScan}
-                activeOpacity={0.7}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: 16,
-                  paddingHorizontal: 32,
-                  borderRadius: 12,
-                  backgroundColor: 'transparent',
-                  borderWidth: 2,
-                  borderColor: '#0ea5e9',
-                  gap: 8,
-                }}
-              >
-                <ScanIcon />
-                <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 18 }}>
-                  Scan QR to Open
-                </RNText>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={handleScan}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 32,
+                borderRadius: 12,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderColor: '#0ea5e9',
+                gap: 8,
+              }}
+            >
+              <ScanIcon />
+              <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 18 }}>
+                Scan QR to Open
+              </RNText>
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
@@ -239,6 +238,39 @@ export default function HomeScreen() {
 
   // Scan screen - QR code scanner
   if (mode === 'scan') {
+    const handleWebScan = (data: string) => {
+      const trimmedData = data.trim();
+      if (validateMnemonic(trimmedData)) {
+        router.push({ pathname: '/(auth)/locker', params: { mnemonic: trimmedData } });
+      } else {
+        window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
+        setMode('home');
+      }
+    };
+
+    const handleWebError = (error: string) => {
+      window.alert(error);
+      setMode('home');
+    };
+
+    // Web scanner
+    if (Platform.OS === 'web') {
+      return (
+        <SafeAreaView className="flex-1 bg-background">
+          <View className="flex-row items-center px-4 py-4">
+            <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+              <BackIcon />
+            </Pressable>
+            <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <WebQRScanner onScan={handleWebScan} onError={handleWebError} />
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    // Mobile scanner - check permissions
     if (!permission) {
       return (
         <SafeAreaView className="flex-1 bg-background items-center justify-center">
@@ -268,6 +300,7 @@ export default function HomeScreen() {
       );
     }
 
+    // Mobile camera view
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-row items-center px-4 py-4">
