@@ -2,7 +2,7 @@ services:
   - type: web
     name: monokey
     runtime: static
-    buildCommand: npx expo export --platform web
+    buildCommand: npm install --legacy-peer-deps && npx expo export --platform web
     staticPublishPath: ./dist
     envVars:
       - key: NODE_VERSION
