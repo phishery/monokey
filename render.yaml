@@ -2,13 +2,17 @@ services:
   - type: web
     name: monokey
     runtime: static
-    buildCommand: npm install --legacy-peer-deps && npm run build && ls -la dist
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: dist
     envVars:
       - key: NODE_VERSION
         value: 20
       - key: CI
         value: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     headers:
       - path: /*
         name: Cache-Control
