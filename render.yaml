@@ -2,11 +2,13 @@ services:
   - type: web
     name: monokey
     runtime: static
-    buildCommand: npm install --legacy-peer-deps && npx expo export --platform web
-    staticPublishPath: ./dist
+    buildCommand: npm install --legacy-peer-deps && npm run build && ls -la dist
+    staticPublishPath: dist
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: CI
+        value: true
     headers:
       - path: /*
         name: Cache-Control
