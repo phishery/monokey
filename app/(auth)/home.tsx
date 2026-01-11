@@ -93,7 +93,10 @@ export default function HomeScreen() {
     // Validate the scanned data is a valid mnemonic
     const trimmedData = data.trim();
     if (validateMnemonic(trimmedData)) {
-      router.push({ pathname: '/(auth)/locker', params: { mnemonic: trimmedData } });
+      // Populate the words and go back to enter mode
+      const words = trimmedData.split(' ');
+      setEnteredWords(words);
+      setMode('enter');
     } else {
       if (Platform.OS === 'web') {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
@@ -209,48 +212,30 @@ export default function HomeScreen() {
               variant="outline"
               onPress={handleOpen}
             />
-            <TouchableOpacity
-              onPress={handleScan}
-              activeOpacity={0.7}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 16,
-                paddingHorizontal: 32,
-                borderRadius: 12,
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                borderColor: '#0ea5e9',
-                gap: 8,
-              }}
-            >
-              <ScanIcon />
-              <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 18 }}>
-                Scan QR to Open
-              </RNText>
-            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Scan screen - QR code scanner
+  // Scan screen - QR code scanner (populates words on enter screen)
   if (mode === 'scan') {
     const handleWebScan = (data: string) => {
       const trimmedData = data.trim();
       if (validateMnemonic(trimmedData)) {
-        router.push({ pathname: '/(auth)/locker', params: { mnemonic: trimmedData } });
+        // Populate the words and go back to enter mode
+        const words = trimmedData.split(' ');
+        setEnteredWords(words);
+        setMode('enter');
       } else {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
-        setMode('home');
+        setMode('enter');
       }
     };
 
     const handleWebError = (error: string) => {
       window.alert(error);
-      setMode('home');
+      setMode('enter');
     };
 
     // Web scanner
@@ -258,7 +243,7 @@ export default function HomeScreen() {
       return (
         <SafeAreaView className="flex-1 bg-background">
           <View className="flex-row items-center px-4 py-4">
-            <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+            <Pressable onPress={() => setMode('enter')} className="p-2 -ml-2">
               <BackIcon />
             </Pressable>
             <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
@@ -283,7 +268,7 @@ export default function HomeScreen() {
       return (
         <SafeAreaView className="flex-1 bg-background">
           <View className="flex-row items-center px-4 py-4">
-            <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+            <Pressable onPress={() => setMode('enter')} className="p-2 -ml-2">
               <BackIcon />
             </Pressable>
             <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
@@ -304,7 +289,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-row items-center px-4 py-4">
-          <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+          <Pressable onPress={() => setMode('enter')} className="p-2 -ml-2">
             <BackIcon />
           </Pressable>
           <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
@@ -456,6 +441,28 @@ export default function HomeScreen() {
         <Text color="muted" className="mb-4">
           Enter your 12-word seed phrase to unlock your locker.
         </Text>
+
+        {/* Scan QR Button */}
+        <TouchableOpacity
+          onPress={handleScan}
+          activeOpacity={0.7}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            paddingHorizontal: 24,
+            borderRadius: 12,
+            backgroundColor: '#1e293b',
+            marginBottom: 16,
+            gap: 8,
+          }}
+        >
+          <ScanIcon />
+          <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 16 }}>
+            Scan QR Code
+          </RNText>
+        </TouchableOpacity>
 
         {suggestions.length > 0 && activeWordIndex !== null && (
           <View className="flex-row flex-wrap gap-2 mb-4 p-3 bg-surface rounded-xl">
