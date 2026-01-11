@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: monokey
+    runtime: static
+    buildCommand: npx expo export --platform web
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
