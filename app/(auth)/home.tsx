@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
-import { View, ScrollView, TextInput, TouchableOpacity, Pressable, Alert, Platform, Text as RNText } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
+import { View, ScrollView, TextInput, TouchableOpacity, Pressable, Alert, Platform, Text as RNText, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Text } from '../../src/components/ui/Text';
 import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
@@ -49,7 +50,17 @@ const BackIcon = () => (
   </Svg>
 );
 
-type Mode = 'home' | 'create' | 'enter';
+const ScanIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth={2}>
+    <Path d="M3 7V5a2 2 0 0 1 2-2h2" />
+    <Path d="M17 3h2a2 2 0 0 1 2 2v2" />
+    <Path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+    <Path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+    <Path d="M7 12h10" />
+  </Svg>
+);
+
+type Mode = 'home' | 'create' | 'enter' | 'scan';
 
 let wordList: string[] = [];
 try {
@@ -66,6 +77,32 @@ export default function HomeScreen() {
   const [enteredWords, setEnteredWords] = useState<string[]>(Array(12).fill(''));
   const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const handleScan = () => {
+    setScanned(false);
+    setMode('scan');
+  };
+
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    if (scanned) return;
+    setScanned(true);
+
+    // Validate the scanned data is a valid mnemonic
+    const trimmedData = data.trim();
+    if (validateMnemonic(trimmedData)) {
+      router.push({ pathname: '/(auth)/locker', params: { mnemonic: trimmedData } });
+    } else {
+      if (Platform.OS === 'web') {
+        window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
+      } else {
+        Alert.alert('Invalid QR Code', 'Please scan a valid Monokey QR code.', [
+          { text: 'Try Again', onPress: () => setScanned(false) }
+        ]);
+      }
+    }
+  };
 
   const handleCreate = () => {
     console.log('handleCreate called');
@@ -171,6 +208,105 @@ export default function HomeScreen() {
               variant="outline"
               onPress={handleOpen}
             />
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                onPress={handleScan}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 16,
+                  paddingHorizontal: 32,
+                  borderRadius: 12,
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  borderColor: '#0ea5e9',
+                  gap: 8,
+                }}
+              >
+                <ScanIcon />
+                <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 18 }}>
+                  Scan QR to Open
+                </RNText>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Scan screen - QR code scanner
+  if (mode === 'scan') {
+    if (!permission) {
+      return (
+        <SafeAreaView className="flex-1 bg-background items-center justify-center">
+          <Text>Requesting camera permission...</Text>
+        </SafeAreaView>
+      );
+    }
+
+    if (!permission.granted) {
+      return (
+        <SafeAreaView className="flex-1 bg-background">
+          <View className="flex-row items-center px-4 py-4">
+            <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+              <BackIcon />
+            </Pressable>
+            <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
+          </View>
+          <View className="flex-1 items-center justify-center px-6">
+            <Text className="text-center mb-4">Camera permission is required to scan QR codes</Text>
+            <SimpleButton
+              title="Grant Permission"
+              variant="primary"
+              onPress={requestPermission}
+            />
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-row items-center px-4 py-4">
+          <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
+            <BackIcon />
+          </Pressable>
+          <Text variant="subtitle" className="ml-2">Scan QR Code</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          />
+          <View style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            marginLeft: -125,
+            marginTop: -125,
+            width: 250,
+            height: 250,
+            borderWidth: 2,
+            borderColor: '#0ea5e9',
+            borderRadius: 20,
+            backgroundColor: 'transparent',
+          }} />
+          <View style={{
+            position: 'absolute',
+            bottom: 40,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+          }}>
+            <Text style={{ color: 'white', textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 12, borderRadius: 8 }}>
+              Point camera at a Monokey QR code
+            </Text>
           </View>
         </View>
       </SafeAreaView>
