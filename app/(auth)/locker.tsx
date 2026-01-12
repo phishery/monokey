@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { View, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../src/components/ui/Text';
 import { mnemonicToSeed } from '../../src/services/bip39';
@@ -14,9 +13,12 @@ import {
   base64ToUint8Array,
   uint8ArrayToBase64,
 } from '../../src/services/crypto';
+import { sha256 } from '@noble/hashes/sha2.js';
 
-const LOCKER_CONTENT_KEY = 'monokey_locker_content';
-const LOCKER_IV_KEY = 'monokey_locker_iv';
+// Backend API URL - use localhost for dev, update for production
+const API_URL = Platform.OS === 'web'
+  ? 'http://localhost:3001'
+  : 'http://localhost:3001';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
@@ -39,6 +41,7 @@ export default function LockerScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [fileKey, setFileKey] = useState<Uint8Array | null>(null);
+  const [lockerId, setLockerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (mnemonic) {
@@ -54,23 +57,37 @@ export default function LockerScreen() {
       const key = deriveFileKey(seed);
       setFileKey(key);
 
-      // Try to load existing content
-      const storedContent = await AsyncStorage.getItem(LOCKER_CONTENT_KEY);
-      const storedIV = await AsyncStorage.getItem(LOCKER_IV_KEY);
+      // Create locker ID from seed hash (hex string)
+      const seedHash = sha256(seed);
+      const id = Array.from(seedHash).map(b => b.toString(16).padStart(2, '0')).join('');
+      setLockerId(id);
 
-      if (storedContent && storedIV) {
-        try {
-          const decrypted = await decrypt(
-            storedContent,
-            key,
-            base64ToUint8Array(storedIV)
-          );
-          setContent(decrypted);
-        } catch (e) {
-          // Wrong key or corrupted data - start fresh
-          console.log('Could not decrypt - wrong key or new locker');
-          setContent('');
+      // Try to load existing content from server
+      try {
+        const response = await fetch(`${API_URL}/locker/${id}`);
+        const data = await response.json();
+
+        if (data.content) {
+          // Content format: "iv:ciphertext"
+          const [storedIV, storedCiphertext] = data.content.split(':');
+          if (storedIV && storedCiphertext) {
+            try {
+              const decrypted = await decrypt(
+                storedCiphertext,
+                key,
+                base64ToUint8Array(storedIV)
+              );
+              setContent(decrypted);
+            } catch (e) {
+              // Wrong key or corrupted data - start fresh
+              console.log('Could not decrypt - wrong key or new locker');
+              setContent('');
+            }
+          }
         }
+      } catch (fetchError) {
+        console.log('Server unavailable, starting with empty content');
+        setContent('');
       }
     } catch (error) {
       console.error('Failed to initialize:', error);
@@ -81,7 +98,7 @@ export default function LockerScreen() {
   };
 
   const handleSave = async () => {
-    if (!fileKey) return;
+    if (!fileKey || !lockerId) return;
 
     setIsSaving(true);
     try {
@@ -89,8 +106,14 @@ export default function LockerScreen() {
       const ivBytes = base64ToUint8Array(iv);
       const encrypted = await encrypt(content, fileKey, ivBytes);
 
-      await AsyncStorage.setItem(LOCKER_CONTENT_KEY, encrypted);
-      await AsyncStorage.setItem(LOCKER_IV_KEY, iv);
+      // Store as "iv:ciphertext" format
+      const serverContent = `${iv}:${encrypted}`;
+
+      await fetch(`${API_URL}/locker/${lockerId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: serverContent }),
+      });
     } catch (error) {
       console.error('Failed to save:', error);
       Alert.alert('Error', 'Failed to save content');
