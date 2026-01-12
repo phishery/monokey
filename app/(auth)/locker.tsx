@@ -15,10 +15,8 @@ import {
 } from '../../src/services/crypto';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-// Backend API URL - use localhost for dev, update for production
-const API_URL = Platform.OS === 'web'
-  ? 'http://localhost:3001'
-  : 'http://localhost:3001';
+// Backend API URL - use env var in production, localhost for dev
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
