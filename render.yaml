@@ -11,10 +11,7 @@ services:
       - key: CI
         value: true
       - key: EXPO_PUBLIC_API_URL
-        fromService:
-          name: monokey-api
-          type: web
-          property: url
+        value: https://monokey-api.onrender.com
     routes:
       - type: rewrite
         source: /*
