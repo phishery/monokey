@@ -1,4 +1,5 @@
 services:
+  # Frontend (static site)
   - type: web
     name: monokey
     runtime: static
@@ -9,6 +10,11 @@ services:
         value: 20
       - key: CI
         value: true
+      - key: EXPO_PUBLIC_API_URL
+        fromService:
+          name: monokey-api
+          type: web
+          property: url
     routes:
       - type: rewrite
         source: /*
@@ -17,3 +23,13 @@ services:
       - path: /*
         name: Cache-Control
         value: no-cache
+
+  # Backend API (Node.js)
+  - type: web
+    name: monokey-api
+    runtime: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
