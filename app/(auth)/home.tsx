@@ -90,13 +90,22 @@ export default function HomeScreen() {
     if (scanned) return;
     setScanned(true);
 
-    // Validate the scanned data is a valid mnemonic
-    const trimmedData = data.trim();
-    if (validateMnemonic(trimmedData)) {
-      // Populate the words and go back to enter mode
-      const words = trimmedData.split(' ');
-      setEnteredWords(words);
-      setMode('enter');
+    let mnemonic = '';
+
+    // Check if it's a URL with key param
+    if (data.includes('/open?key=')) {
+      const match = data.match(/[?&]key=([^&]+)/);
+      if (match) {
+        mnemonic = match[1].replace(/-/g, ' ');
+      }
+    } else {
+      // Assume it's a plain mnemonic
+      mnemonic = data.trim();
+    }
+
+    if (validateMnemonic(mnemonic)) {
+      // Valid - go directly to locker
+      router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
     } else {
       if (Platform.OS === 'web') {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
@@ -221,12 +230,22 @@ export default function HomeScreen() {
   // Scan screen - QR code scanner (populates words on enter screen)
   if (mode === 'scan') {
     const handleWebScan = (data: string) => {
-      const trimmedData = data.trim();
-      if (validateMnemonic(trimmedData)) {
-        // Populate the words and go back to enter mode
-        const words = trimmedData.split(' ');
-        setEnteredWords(words);
-        setMode('enter');
+      let mnemonic = '';
+
+      // Check if it's a URL with key param
+      if (data.includes('/open?key=')) {
+        const match = data.match(/[?&]key=([^&]+)/);
+        if (match) {
+          mnemonic = match[1].replace(/-/g, ' ');
+        }
+      } else {
+        // Assume it's a plain mnemonic
+        mnemonic = data.trim();
+      }
+
+      if (validateMnemonic(mnemonic)) {
+        // Valid - go directly to locker
+        router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
       } else {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
         setMode('enter');
@@ -356,11 +375,11 @@ export default function HomeScreen() {
               {/* QR Code Section */}
               <View className="mt-8 items-center">
                 <Text variant="caption" color="muted" className="mb-4 text-center">
-                  Or save this QR code to quickly access your locker
+                  Save this QR code - scan it to instantly open your locker
                 </Text>
-                <View className="bg-white p-4 rounded-xl">
+                <View id="qr-container" className="bg-white p-4 rounded-xl">
                   <QRCode
-                    value={generatedWords.join(' ')}
+                    value={`${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`}
                     size={200}
                     backgroundColor="white"
                     color="black"
@@ -369,38 +388,41 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     if (Platform.OS === 'web') {
-                      // For web, create a downloadable SVG/PNG
-                      const svg = document.querySelector('.qr-container svg');
+                      // Find the SVG inside qr-container
+                      const container = document.getElementById('qr-container');
+                      const svg = container?.querySelector('svg');
                       if (svg) {
                         const svgData = new XMLSerializer().serializeToString(svg);
                         const canvas = document.createElement('canvas');
+                        canvas.width = 200;
+                        canvas.height = 200;
                         const ctx = canvas.getContext('2d');
                         const img = new Image();
                         img.onload = () => {
-                          canvas.width = img.width;
-                          canvas.height = img.height;
-                          ctx?.drawImage(img, 0, 0);
+                          ctx?.drawImage(img, 0, 0, 200, 200);
                           const pngUrl = canvas.toDataURL('image/png');
                           const link = document.createElement('a');
                           link.download = 'monokey-qr.png';
                           link.href = pngUrl;
                           link.click();
                         };
-                        img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+                        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
                       } else {
-                        window.alert('Right-click on the QR code and select "Save Image As" to download');
+                        window.alert('Could not find QR code. Try right-clicking and saving the image.');
                       }
                     } else {
-                      Alert.alert('Save QR', 'Long press on the QR code to save it to your photos');
+                      Alert.alert('Save QR', 'Take a screenshot to save the QR code');
                     }
                   }}
                   style={{
                     marginTop: 12,
                     paddingVertical: 8,
                     paddingHorizontal: 16,
+                    backgroundColor: '#1e293b',
+                    borderRadius: 8,
                   }}
                 >
-                  <Text color="primary" variant="caption">Save QR Code</Text>
+                  <Text color="primary" variant="caption">Download QR Code</Text>
                 </TouchableOpacity>
               </View>
             </>
