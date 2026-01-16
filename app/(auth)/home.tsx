@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, TextInput, TouchableOpacity, Pressable, Alert, Platform, Text as RNText, StyleSheet } from 'react-native';
+import { View, ScrollView, TextInput, TouchableOpacity, Pressable, Alert, Platform, Text as RNText, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -11,6 +11,8 @@ import { Card } from '../../src/components/ui/Card';
 import { WordGrid } from '../../src/components/key/WordGrid';
 import { WebQRScanner } from '../../src/components/qr/WebQRScanner';
 import { generateMnemonic, validateMnemonic, getWordList } from '../../src/services/bip39';
+
+const MonokeyLogo = require('../../assets/monokey.png');
 
 // Simple button using TouchableOpacity which works on web
 const SimpleButton = ({ onPress, title, variant = 'primary' }: { onPress: () => void; title: string; variant?: 'primary' | 'outline' }) => {
@@ -39,11 +41,6 @@ const SimpleButton = ({ onPress, title, variant = 'primary' }: { onPress: () => 
   );
 };
 
-const KeyIcon = () => (
-  <Svg width={80} height={80} viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth={1.5}>
-    <Path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
-  </Svg>
-);
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
@@ -261,7 +258,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center px-6">
-          <KeyIcon />
+          <Image source={MonokeyLogo} style={{ width: 120, height: 120 }} resizeMode="contain" />
           <Text variant="title" className="mt-6 text-center">
             Monokey
           </Text>
