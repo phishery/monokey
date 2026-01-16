@@ -15,8 +15,9 @@ import {
 } from '../../src/services/crypto';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-// Backend API URL - use env var in production, localhost for dev
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+// Upstash Redis REST API
+const UPSTASH_URL = 'https://legible-cheetah-40701.upstash.io';
+const UPSTASH_TOKEN = 'AZ79AAIncDJkNjdhM2Q2ODgxMjE0YjZjOTljNjZkMDEzMjVkMTRkY3AyNDA3MDE';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
@@ -60,14 +61,16 @@ export default function LockerScreen() {
       const id = Array.from(seedHash).map(b => b.toString(16).padStart(2, '0')).join('');
       setLockerId(id);
 
-      // Try to load existing content from server
+      // Try to load existing content from Upstash Redis
       try {
-        const response = await fetch(`${API_URL}/locker/${id}`);
+        const response = await fetch(`${UPSTASH_URL}/get/${id}`, {
+          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+        });
         const data = await response.json();
 
-        if (data.content) {
+        if (data.result) {
           // Content format: "iv:ciphertext"
-          const [storedIV, storedCiphertext] = data.content.split(':');
+          const [storedIV, storedCiphertext] = data.result.split(':');
           if (storedIV && storedCiphertext) {
             try {
               const decrypted = await decrypt(
@@ -84,7 +87,7 @@ export default function LockerScreen() {
           }
         }
       } catch (fetchError) {
-        console.log('Server unavailable, starting with empty content');
+        console.log('Database unavailable, starting with empty content');
         setContent('');
       }
     } catch (error) {
@@ -104,13 +107,12 @@ export default function LockerScreen() {
       const ivBytes = base64ToUint8Array(iv);
       const encrypted = await encrypt(content, fileKey, ivBytes);
 
-      // Store as "iv:ciphertext" format
-      const serverContent = `${iv}:${encrypted}`;
+      // Store as "iv:ciphertext" format - URL encode to handle special chars
+      const redisValue = encodeURIComponent(`${iv}:${encrypted}`);
 
-      await fetch(`${API_URL}/locker/${lockerId}`, {
+      await fetch(`${UPSTASH_URL}/set/${lockerId}/${redisValue}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: serverContent }),
+        headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
       });
     } catch (error) {
       console.error('Failed to save:', error);
