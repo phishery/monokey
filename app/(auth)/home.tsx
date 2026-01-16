@@ -61,6 +61,21 @@ const ScanIcon = () => (
   </Svg>
 );
 
+const UploadIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth={2}>
+    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <Path d="M17 8l-5-5-5 5" />
+    <Path d="M12 3v12" />
+  </Svg>
+);
+
+const CopyIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth={2}>
+    <Path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <Path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
+  </Svg>
+);
+
 type Mode = 'home' | 'create' | 'enter' | 'scan';
 
 let wordList: string[] = [];
@@ -84,6 +99,50 @@ export default function HomeScreen() {
   const handleScan = () => {
     setScanned(false);
     setMode('scan');
+  };
+
+  const handleUploadQR = async () => {
+    if (Platform.OS === 'web') {
+      // Create file input and trigger it
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+          const { Html5Qrcode } = await import('html5-qrcode');
+          const html5QrCode = new Html5Qrcode('qr-upload-reader');
+          const result = await html5QrCode.scanFile(file, true);
+          html5QrCode.clear();
+
+          // Parse the result
+          let mnemonic = '';
+          if (result.includes('/open?key=')) {
+            const match = result.match(/[?&]key=([^&]+)/);
+            if (match) {
+              mnemonic = match[1].replace(/-/g, ' ');
+            }
+          } else {
+            mnemonic = result.trim();
+          }
+
+          if (validateMnemonic(mnemonic)) {
+            router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
+          } else {
+            window.alert('Invalid QR code. Please upload a valid Monokey QR code.');
+          }
+        } catch (err) {
+          console.error('QR scan error:', err);
+          window.alert('Could not read QR code from image. Please try another image.');
+        }
+      };
+      input.click();
+    } else {
+      // For mobile, could use expo-image-picker
+      Alert.alert('Upload QR', 'Please use the camera scanner on mobile devices.');
+    }
   };
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
@@ -385,45 +444,73 @@ export default function HomeScreen() {
                     color="black"
                   />
                 </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      // Find the SVG inside qr-container
-                      const container = document.getElementById('qr-container');
-                      const svg = container?.querySelector('svg');
-                      if (svg) {
-                        const svgData = new XMLSerializer().serializeToString(svg);
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 200;
-                        canvas.height = 200;
-                        const ctx = canvas.getContext('2d');
-                        const img = new Image();
-                        img.onload = () => {
-                          ctx?.drawImage(img, 0, 0, 200, 200);
-                          const pngUrl = canvas.toDataURL('image/png');
-                          const link = document.createElement('a');
-                          link.download = 'monokey-qr.png';
-                          link.href = pngUrl;
-                          link.click();
-                        };
-                        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        // Find the SVG inside qr-container
+                        const container = document.getElementById('qr-container');
+                        const svg = container?.querySelector('svg');
+                        if (svg) {
+                          const svgData = new XMLSerializer().serializeToString(svg);
+                          const canvas = document.createElement('canvas');
+                          canvas.width = 200;
+                          canvas.height = 200;
+                          const ctx = canvas.getContext('2d');
+                          const img = new Image();
+                          img.onload = () => {
+                            ctx?.drawImage(img, 0, 0, 200, 200);
+                            const pngUrl = canvas.toDataURL('image/png');
+                            const link = document.createElement('a');
+                            link.download = 'monokey-qr.png';
+                            link.href = pngUrl;
+                            link.click();
+                          };
+                          img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                        } else {
+                          window.alert('Could not find QR code. Try right-clicking and saving the image.');
+                        }
                       } else {
-                        window.alert('Could not find QR code. Try right-clicking and saving the image.');
+                        Alert.alert('Save QR', 'Take a screenshot to save the QR code');
                       }
-                    } else {
-                      Alert.alert('Save QR', 'Take a screenshot to save the QR code');
-                    }
-                  }}
-                  style={{
-                    marginTop: 12,
-                    paddingVertical: 8,
-                    paddingHorizontal: 16,
-                    backgroundColor: '#1e293b',
-                    borderRadius: 8,
-                  }}
-                >
-                  <Text color="primary" variant="caption">Download QR Code</Text>
-                </TouchableOpacity>
+                    }}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 16,
+                      backgroundColor: '#1e293b',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text color="primary" variant="caption">Download QR</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const lockerUrl = `${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`;
+                      if (Platform.OS === 'web') {
+                        navigator.clipboard.writeText(lockerUrl).then(() => {
+                          window.alert('Link copied! Share this with anyone to give them access to your locker.');
+                        }).catch(() => {
+                          window.prompt('Copy this link:', lockerUrl);
+                        });
+                      } else {
+                        Alert.alert('Copy Link', lockerUrl);
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 8,
+                      paddingHorizontal: 16,
+                      backgroundColor: '#1e293b',
+                      borderRadius: 8,
+                      gap: 6,
+                    }}
+                  >
+                    <CopyIcon />
+                    <Text color="primary" variant="caption">Copy Link</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </>
           ) : (
@@ -464,27 +551,53 @@ export default function HomeScreen() {
           Enter your 12-word seed phrase to unlock your locker.
         </Text>
 
-        {/* Scan QR Button */}
-        <TouchableOpacity
-          onPress={handleScan}
-          activeOpacity={0.7}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 12,
-            paddingHorizontal: 24,
-            borderRadius: 12,
-            backgroundColor: '#1e293b',
-            marginBottom: 16,
-            gap: 8,
-          }}
-        >
-          <ScanIcon />
-          <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 16 }}>
-            Scan QR Code
-          </RNText>
-        </TouchableOpacity>
+        {/* Hidden div for QR upload scanner */}
+        {Platform.OS === 'web' && <div id="qr-upload-reader" style={{ display: 'none' }} />}
+
+        {/* Scan/Upload QR Buttons */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <TouchableOpacity
+            onPress={handleScan}
+            activeOpacity={0.7}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              backgroundColor: '#1e293b',
+              gap: 8,
+            }}
+          >
+            <ScanIcon />
+            <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 14 }}>
+              Scan QR
+            </RNText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleUploadQR}
+            activeOpacity={0.7}
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              backgroundColor: '#1e293b',
+              gap: 8,
+            }}
+          >
+            <UploadIcon />
+            <RNText style={{ color: '#0ea5e9', fontWeight: '600', fontSize: 14 }}>
+              Upload QR
+            </RNText>
+          </TouchableOpacity>
+        </View>
 
         {suggestions.length > 0 && activeWordIndex !== null && (
           <View className="flex-row flex-wrap gap-2 mb-4 p-3 bg-surface rounded-xl">
