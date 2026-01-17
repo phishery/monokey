@@ -335,6 +335,16 @@ export default function HomeScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+
+              <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#e2e8f0' }}>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Install the App</Text>
+                <Text variant="caption" color="muted">
+                  Add Monokey to your home screen for quick access:{'\n'}
+                  • iPhone/iPad: Tap Share → "Add to Home Screen"{'\n'}
+                  • Android: Tap Menu → "Add to Home Screen"{'\n'}
+                  • Desktop: Most browsers show an install icon in the address bar
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
