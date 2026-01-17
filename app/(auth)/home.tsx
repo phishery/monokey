@@ -257,14 +257,24 @@ export default function HomeScreen() {
   if (mode === 'home') {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="flex-1 items-center justify-center px-6">
-          <Image source={MonokeyLogo} style={{ width: 200, height: 200 }} resizeMode="contain" />
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingVertical: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="items-center">
+            <Image
+              source={MonokeyLogo}
+              style={{ width: 180, height: 180 }}
+              resizeMode="contain"
+            />
           <Text variant="title" className="mt-6 text-center">
             Monokey
           </Text>
-          <Text color="muted" className="mt-2 text-center mb-12">
+          <Text color="muted" className="mt-2 text-center mb-8">
             Secure your content with a 12-word seed phrase
           </Text>
+          </View>
 
           <View style={{ width: '100%', gap: 16 }}>
             <SimpleButton
@@ -327,7 +337,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
