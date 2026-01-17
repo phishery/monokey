@@ -306,7 +306,7 @@ export default function HomeScreen() {
               <View>
                 <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Military-Grade Encryption</Text>
                 <Text variant="caption" color="muted">
-                  Your seed phrase generates a unique cryptographic key using industry-standard algorithms (BIP39, HKDF). This key encrypts your locker content with AES encryption — the same standard used by governments and banks.
+                  Your seed phrase generates a unique cryptographic key using industry-standard algorithms (BIP39, HKDF). This key encrypts your locker content with AES encryption — the same standard used by governments, banks, and Bitcoin.
                 </Text>
               </View>
 
