@@ -89,7 +89,7 @@ export default function LockerScreen() {
       }
     } catch (error) {
       console.error('Failed to initialize:', error);
-      Alert.alert('Error', 'Failed to initialize locker');
+      Alert.alert('Error', 'Failed to initialize vault');
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +142,7 @@ export default function LockerScreen() {
             <BackIcon />
           </Pressable>
           <Text variant="subtitle" className="ml-2">
-            Your Locker
+            Your Vault
           </Text>
         </View>
 

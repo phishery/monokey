@@ -203,12 +203,12 @@ export default function HomeScreen() {
 
           <View style={{ width: '100%', gap: 16 }}>
             <SimpleButton
-              title="Create Monokey Locker"
+              title="Create Monokey Vault"
               variant="primary"
               onPress={handleCreate}
             />
             <SimpleButton
-              title="Open Monokey Locker"
+              title="Open Monokey Vault"
               variant="outline"
               onPress={handleOpen}
             />
@@ -345,7 +345,7 @@ export default function HomeScreen() {
         <ScrollView className="flex-1 px-6">
           <Card className="bg-error/10 mb-6">
             <Text color="error" variant="caption">
-              Write these 12 words down and store them safely. Anyone with these words can access your locker.
+              Write these 12 words down and store them safely. Anyone with these words can access your vault.
             </Text>
           </Card>
 
@@ -356,7 +356,7 @@ export default function HomeScreen() {
               {/* QR Code Section */}
               <View className="mt-8 items-center">
                 <Text variant="caption" color="muted" className="mb-4 text-center">
-                  Or save this QR code to quickly access your locker
+                  Or save this QR code to quickly access your vault
                 </Text>
                 <View className="bg-white p-4 rounded-xl">
                   <QRCode
@@ -412,7 +412,7 @@ export default function HomeScreen() {
 
           <View style={{ marginTop: 32, marginBottom: 24, gap: 12 }}>
             <SimpleButton
-              title="Open My Locker"
+              title="Open My Vault"
               variant="primary"
               onPress={handleContinue}
             />
@@ -439,7 +439,7 @@ export default function HomeScreen() {
 
       <ScrollView className="flex-1 px-6" keyboardShouldPersistTaps="handled">
         <Text color="muted" className="mb-4">
-          Enter your 12-word seed phrase to unlock your locker.
+          Enter your 12-word seed phrase to unlock your vault.
         </Text>
 
         {/* Scan QR Button */}
@@ -503,7 +503,7 @@ export default function HomeScreen() {
 
         <View className="mt-8 mb-6">
           <Button
-            title="Unlock Locker"
+            title="Unlock Vault"
             variant="primary"
             size="lg"
             onPress={handleUnlock}
