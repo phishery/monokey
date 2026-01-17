@@ -278,6 +278,36 @@ export default function HomeScreen() {
               onPress={handleOpen}
             />
           </View>
+
+          {/* How it works section */}
+          <View style={{ marginTop: 48, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#e2e8f0' }}>
+            <Text variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
+              How Monokey Works
+            </Text>
+
+            <View style={{ gap: 16 }}>
+              <View>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Unguessable Key</Text>
+                <Text variant="caption" color="muted">
+                  Your 12-word seed phrase is randomly selected from 2,048 words. There are 5.4 × 10³⁹ possible combinations — more than the number of atoms on Earth. The odds of someone guessing your phrase are essentially zero.
+                </Text>
+              </View>
+
+              <View>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Military-Grade Encryption</Text>
+                <Text variant="caption" color="muted">
+                  Your seed phrase generates a unique cryptographic key using industry-standard algorithms (BIP39, HKDF). This key encrypts your locker content with AES encryption — the same standard used by governments and banks.
+                </Text>
+              </View>
+
+              <View>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Zero-Knowledge Storage</Text>
+                <Text variant="caption" color="muted">
+                  Your content is encrypted before it leaves your device. We only store encrypted data — without your seed phrase, not even we can read your content.
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );
