@@ -100,6 +100,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/locker/:prefix/:id', async (req, res) => {
   try {
     const { prefix, id } = req.params;
+    console.log(`GET ${prefix}/${id.substring(0, 8)}...`);
 
     if (!validatePrefix(prefix)) {
       return res.status(400).json({ error: 'Invalid prefix. Must be "write" or "view"' });
@@ -110,6 +111,7 @@ app.get('/api/locker/:prefix/:id', async (req, res) => {
 
     const key = `${prefix}:${id}`;
     const result = await upstashGet(key);
+    console.log(`  -> ${result ? 'found data' : 'no data'}`);
 
     res.json({ result });
   } catch (error) {
@@ -124,6 +126,7 @@ app.post('/api/locker/:prefix/:id', async (req, res) => {
   try {
     const { prefix, id } = req.params;
     const { data } = req.body;
+    console.log(`POST ${prefix}/${id.substring(0, 8)}... (${data?.length || 0} bytes)`);
 
     if (!validatePrefix(prefix)) {
       return res.status(400).json({ error: 'Invalid prefix. Must be "write" or "view"' });
@@ -140,6 +143,7 @@ app.post('/api/locker/:prefix/:id', async (req, res) => {
 
     const key = `${prefix}:${id}`;
     await upstashSet(key, data);
+    console.log(`  -> saved`);
 
     res.json({ success: true });
   } catch (error) {

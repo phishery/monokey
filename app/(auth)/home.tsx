@@ -107,9 +107,40 @@ export default function HomeScreen() {
     setMode('scan');
   };
 
+  // Decode URL-safe base64 to mnemonic
+  const decodeKey = (encoded: string): string => {
+    try {
+      let base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) base64 += '=';
+      return atob(base64);
+    } catch {
+      return '';
+    }
+  };
+
   // Helper to parse QR data and navigate to locker
   const parseAndNavigateFromQR = (data: string): boolean => {
-    // Check for view-only key
+    // Check for encoded view-only key (new format: ?v=base64)
+    const vMatch = data.match(/[?&]v=([^&]+)/);
+    if (vMatch) {
+      const mnemonic = decodeKey(vMatch[1]);
+      if (validateMnemonic(mnemonic)) {
+        router.push({ pathname: '/(auth)/locker', params: { viewMnemonic: mnemonic } });
+        return true;
+      }
+    }
+
+    // Check for encoded write key (new format: ?w=base64)
+    const wMatch = data.match(/[?&]w=([^&]+)/);
+    if (wMatch) {
+      const mnemonic = decodeKey(wMatch[1]);
+      if (validateMnemonic(mnemonic)) {
+        router.push({ pathname: '/(auth)/locker', params: { writeMnemonic: mnemonic } });
+        return true;
+      }
+    }
+
+    // Legacy: check for view-only key (old format with hyphens)
     const viewMatch = data.match(/[?&]view=([^&]+)/);
     if (viewMatch) {
       const mnemonic = viewMatch[1].replace(/-/g, ' ');
@@ -119,7 +150,7 @@ export default function HomeScreen() {
       }
     }
 
-    // Check for write (full access) key
+    // Legacy: check for write key (old format with hyphens)
     const writeMatch = data.match(/[?&]write=([^&]+)/);
     if (writeMatch) {
       const mnemonic = writeMatch[1].replace(/-/g, ' ');
@@ -498,6 +529,12 @@ export default function HomeScreen() {
   if (mode === 'create') {
     const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com';
 
+    // Encode mnemonic to URL-safe base64 (obfuscates the words)
+    const encodeKey = (words: string[]) => {
+      const mnemonic = words.join(' ');
+      return btoa(mnemonic).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    };
+
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-row items-center px-4 py-4">
@@ -547,7 +584,7 @@ export default function HomeScreen() {
                   </View>
                   <View className="bg-white p-4 rounded-xl" style={{ borderWidth: 2, borderColor: '#fecaca' }}>
                     <QRCode
-                      value={`${baseUrl}/open?write=${writeWords.join('-')}`}
+                      value={`${baseUrl}/open?w=${encodeKey(writeWords)}`}
                       size={160}
                       backgroundColor="white"
                       color="black"
@@ -555,7 +592,7 @@ export default function HomeScreen() {
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const lockerUrl = `${baseUrl}/open?write=${writeWords.join('-')}`;
+                      const lockerUrl = `${baseUrl}/open?w=${encodeKey(writeWords)}`;
                       if (Platform.OS === 'web') {
                         navigator.clipboard.writeText(lockerUrl).then(() => {
                           window.alert('Full Access link copied! Keep this private - it allows editing your locker.');
@@ -606,7 +643,7 @@ export default function HomeScreen() {
                   </View>
                   <View className="bg-white p-4 rounded-xl" style={{ borderWidth: 2, borderColor: '#bbf7d0' }}>
                     <QRCode
-                      value={`${baseUrl}/open?view=${viewWords.join('-')}`}
+                      value={`${baseUrl}/open?v=${encodeKey(viewWords)}`}
                       size={160}
                       backgroundColor="white"
                       color="black"
@@ -614,7 +651,7 @@ export default function HomeScreen() {
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const lockerUrl = `${baseUrl}/open?view=${viewWords.join('-')}`;
+                      const lockerUrl = `${baseUrl}/open?v=${encodeKey(viewWords)}`;
                       if (Platform.OS === 'web') {
                         navigator.clipboard.writeText(lockerUrl).then(() => {
                           window.alert('View-Only link copied! Share this to let others view your locker.');

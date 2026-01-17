@@ -5,8 +5,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../src/components/ui/Text';
 import { validateMnemonic } from '../src/services/bip39';
 
+// Decode URL-safe base64 to mnemonic
+const decodeKey = (encoded: string): string => {
+  try {
+    // Restore base64 padding and characters
+    let base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    return atob(base64);
+  } catch {
+    return '';
+  }
+};
+
 export default function OpenScreen() {
-  const params = useLocalSearchParams<{ key?: string; view?: string; write?: string }>();
+  const params = useLocalSearchParams<{
+    key?: string;
+    view?: string;
+    write?: string;
+    v?: string;  // encoded view
+    w?: string;  // encoded write
+  }>();
   const router = useRouter();
   const [status, setStatus] = useState('Opening your locker...');
 
@@ -14,7 +32,31 @@ export default function OpenScreen() {
     // Small delay to ensure router is ready
     const timer = setTimeout(() => {
       try {
-        // Handle view-only access
+        // Handle encoded view-only access (new format: ?v=base64)
+        if (params.v) {
+          const mnemonic = decodeKey(params.v);
+          if (validateMnemonic(mnemonic)) {
+            router.replace({ pathname: '/(auth)/locker', params: { viewMnemonic: mnemonic } });
+          } else {
+            setStatus('Invalid view key. Redirecting...');
+            router.replace('/(auth)/home');
+          }
+          return;
+        }
+
+        // Handle encoded write access (new format: ?w=base64)
+        if (params.w) {
+          const mnemonic = decodeKey(params.w);
+          if (validateMnemonic(mnemonic)) {
+            router.replace({ pathname: '/(auth)/locker', params: { writeMnemonic: mnemonic } });
+          } else {
+            setStatus('Invalid write key. Redirecting...');
+            router.replace('/(auth)/home');
+          }
+          return;
+        }
+
+        // Legacy: handle old-style view param (words with hyphens)
         if (params.view) {
           const mnemonic = params.view.replace(/-/g, ' ');
           if (validateMnemonic(mnemonic)) {
@@ -26,7 +68,7 @@ export default function OpenScreen() {
           return;
         }
 
-        // Handle full (write) access
+        // Legacy: handle old-style write param (words with hyphens)
         if (params.write) {
           const mnemonic = params.write.replace(/-/g, ' ');
           if (validateMnemonic(mnemonic)) {
@@ -38,7 +80,7 @@ export default function OpenScreen() {
           return;
         }
 
-        // Legacy support: handle old-style key param (treat as write access)
+        // Legacy: handle old-style key param (treat as write access)
         if (params.key) {
           const mnemonic = params.key.replace(/-/g, ' ');
           if (validateMnemonic(mnemonic)) {
@@ -60,7 +102,7 @@ export default function OpenScreen() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [params.key, params.view, params.write, router]);
+  }, [params.key, params.view, params.write, params.v, params.w, router]);
 
   return (
     <SafeAreaView className="flex-1 bg-background items-center justify-center">

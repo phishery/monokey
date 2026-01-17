@@ -116,19 +116,19 @@ export default function LockerScreen() {
         setContent('');
         setOriginalContent('');
       }
-      // Opening with a single mnemonic - determine if view or write
+      // Opening with write mnemonic (full access)
       else if (mnemonic) {
         const seed = await mnemonicToSeed(mnemonic, '');
         const lockerId = generateLockerId(seed);
         const key = deriveFileKey(seed);
         setUserKey(key);
 
-        // Try to fetch as write locker first
+        // Fetch as write locker
         const writeResponse = await fetch(`${API_URL}/api/locker/write/${lockerId}`);
         const writeData = await writeResponse.json();
 
         if (writeData.result) {
-          // This is a write locker
+          // Found write locker - full access
           const lockerData: LockerData = JSON.parse(writeData.result);
           setWriteLockerId(lockerId);
           setAccessMode('write');
@@ -150,45 +150,60 @@ export default function LockerScreen() {
           setContent(decryptedContent);
           setOriginalContent(decryptedContent);
         } else {
-          // Try as view locker
-          const viewResponse = await fetch(`${API_URL}/api/locker/view/${lockerId}`);
-          const viewData = await viewResponse.json();
+          // No locker found for this write key
+          console.log('No locker found for this write key');
+          setAccessMode('write');
+          setWriteLockerId(lockerId);
+          setContentKey(await generateContentKey());
+          setContent('');
+          setOriginalContent('');
+        }
+      }
+      // Opening with view mnemonic only (view-only access)
+      else if (params.viewMnemonic) {
+        const seed = await mnemonicToSeed(params.viewMnemonic, '');
+        const lockerId = generateLockerId(seed);
+        const key = deriveFileKey(seed);
+        setUserKey(key);
 
-          if (viewData.result) {
-            // This is a view locker
-            const viewRefData: ViewRefData = JSON.parse(viewData.result);
-            setAccessMode('view');
-            setWriteLockerId(viewRefData.writeRef);
+        // Fetch view reference
+        const viewResponse = await fetch(`${API_URL}/api/locker/view/${lockerId}`);
+        const viewData = await viewResponse.json();
 
-            // Decrypt content key with view key
-            const decryptedContentKey = await decryptKey(
-              viewRefData.encryptedContentKey,
-              key,
-              base64ToUint8Array(viewRefData.keyIv)
+        if (viewData.result) {
+          // Found view reference - view-only access
+          const viewRefData: ViewRefData = JSON.parse(viewData.result);
+          setAccessMode('view');
+          setWriteLockerId(viewRefData.writeRef);
+
+          // Decrypt content key with view key
+          const decryptedContentKey = await decryptKey(
+            viewRefData.encryptedContentKey,
+            key,
+            base64ToUint8Array(viewRefData.keyIv)
+          );
+          setContentKey(decryptedContentKey);
+
+          // Fetch actual content from write locker
+          const contentResponse = await fetch(`${API_URL}/api/locker/write/${viewRefData.writeRef}`);
+          const contentData = await contentResponse.json();
+
+          if (contentData.result) {
+            const lockerData: LockerData = JSON.parse(contentData.result);
+            const decryptedContent = await decrypt(
+              lockerData.encryptedContent,
+              decryptedContentKey,
+              base64ToUint8Array(lockerData.contentIv)
             );
-            setContentKey(decryptedContentKey);
-
-            // Fetch actual content from write locker
-            const contentResponse = await fetch(`${API_URL}/api/locker/write/${viewRefData.writeRef}`);
-            const contentData = await contentResponse.json();
-
-            if (contentData.result) {
-              const lockerData: LockerData = JSON.parse(contentData.result);
-              const decryptedContent = await decrypt(
-                lockerData.encryptedContent,
-                decryptedContentKey,
-                base64ToUint8Array(lockerData.contentIv)
-              );
-              setContent(decryptedContent);
-              setOriginalContent(decryptedContent);
-            }
-          } else {
-            // No existing locker found - this shouldn't happen for single mnemonic opens
-            console.log('No locker found for this key');
-            setAccessMode('view');
-            setContent('');
-            setOriginalContent('');
+            setContent(decryptedContent);
+            setOriginalContent(decryptedContent);
           }
+        } else {
+          // No locker found for this view key
+          console.log('No locker found for this view key');
+          setAccessMode('view');
+          setContent('');
+          setOriginalContent('');
         }
       }
     } catch (error) {
@@ -286,23 +301,88 @@ export default function LockerScreen() {
     }
   };
 
-  const handleLock = () => {
-    if (hasUnsavedChanges && accessMode !== 'view') {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have unsaved changes. Are you sure you want to lock without saving?')) {
-          router.replace('/(auth)/home');
+  const handleBack = () => {
+    router.replace('/(auth)/home');
+  };
+
+  const handleSaveAndLock = async () => {
+    if (hasUnsavedChanges) {
+      // Save first, then lock
+      setIsSaving(true);
+      try {
+        // Encrypt content with content key
+        const contentIv = await generateIV();
+        const contentIvBytes = base64ToUint8Array(contentIv);
+        const encryptedContent = await encrypt(content, contentKey!, contentIvBytes);
+
+        // For new lockers, also set up the view reference
+        if (accessMode === 'new' && viewLockerId && userKey && params.viewMnemonic) {
+          // Encrypt content key with write key
+          const { encryptedKey: writeEncryptedKey, iv: writeKeyIv } = await encryptKey(contentKey!, userKey);
+
+          // Get view key and encrypt content key with it
+          const viewSeed = await mnemonicToSeed(params.viewMnemonic, '');
+          const viewKey = deriveFileKey(viewSeed);
+          const { encryptedKey: viewEncryptedKey, iv: viewKeyIv } = await encryptKey(contentKey!, viewKey);
+
+          // Store write locker
+          const writeLockerData: LockerData = {
+            type: 'write',
+            contentIv,
+            encryptedContent,
+            keyIv: writeKeyIv,
+            encryptedContentKey: writeEncryptedKey,
+            viewLockerId,
+          };
+
+          await fetch(`${API_URL}/api/locker/write/${writeLockerId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: JSON.stringify(writeLockerData) }),
+          });
+
+          // Store view reference
+          const viewRefData: ViewRefData = {
+            type: 'view',
+            writeRef: writeLockerId!,
+            keyIv: viewKeyIv,
+            encryptedContentKey: viewEncryptedKey,
+          };
+
+          await fetch(`${API_URL}/api/locker/view/${viewLockerId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: JSON.stringify(viewRefData) }),
+          });
+        } else if (accessMode === 'write' && userKey) {
+          // Update existing write locker
+          const { encryptedKey, iv: keyIv } = await encryptKey(contentKey!, userKey);
+
+          const writeLockerData: LockerData = {
+            type: 'write',
+            contentIv,
+            encryptedContent,
+            keyIv,
+            encryptedContentKey: encryptedKey,
+            viewLockerId: viewLockerId || undefined,
+          };
+
+          await fetch(`${API_URL}/api/locker/write/${writeLockerId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: JSON.stringify(writeLockerData) }),
+          });
         }
-      } else {
-        Alert.alert(
-          'Unsaved Changes',
-          'You have unsaved changes. Are you sure you want to lock without saving?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Lock Anyway', style: 'destructive', onPress: () => router.replace('/(auth)/home') },
-          ]
-        );
+
+        // Navigate home after successful save
+        router.replace('/(auth)/home');
+      } catch (error) {
+        console.error('Failed to save:', error);
+        Alert.alert('Error', 'Failed to save content');
+        setIsSaving(false);
       }
     } else {
+      // No changes, just lock
       router.replace('/(auth)/home');
     }
   };
@@ -322,7 +402,7 @@ export default function LockerScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-4 border-b border-border">
         <View className="flex-row items-center flex-1">
-          <Pressable onPress={handleLock} className="p-2 -ml-2">
+          <Pressable onPress={accessMode === 'view' ? handleBack : handleSaveAndLock} className="p-2 -ml-2">
             <BackIcon />
           </Pressable>
           <Text variant="subtitle" className="ml-2">
@@ -343,43 +423,33 @@ export default function LockerScreen() {
           )}
           {canEdit && (
             <Pressable
-              onPress={handleSave}
+              onPress={handleSaveAndLock}
+              disabled={isSaving}
               style={{
-                backgroundColor: hasUnsavedChanges ? '#22c55e' : '#94a3b8',
-                paddingHorizontal: 12,
-                paddingVertical: 8,
+                backgroundColor: hasUnsavedChanges ? '#22c55e' : '#0ea5e9',
+                paddingHorizontal: 16,
+                paddingVertical: 10,
                 borderRadius: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                gap: 6,
+                opacity: isSaving ? 0.7 : 1,
               }}
             >
-              <Text style={{ color: 'white', fontWeight: '600' }}>Save</Text>
+              <LockIcon />
+              <Text style={{ color: 'white', fontWeight: '600' }}>
+                {hasUnsavedChanges ? 'Save & Lock' : 'Lock'}
+              </Text>
             </Pressable>
           )}
-          <Pressable
-            onPress={handleLock}
-            style={{
-              backgroundColor: '#0ea5e9',
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 8,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <LockIcon />
-            <Text style={{ color: 'white', fontWeight: '600' }}>Lock</Text>
-          </Pressable>
         </View>
       </View>
 
       {/* Warning banner for edit mode */}
-      {canEdit && (
+      {canEdit && hasUnsavedChanges && (
         <View style={{ backgroundColor: '#fef3c7', padding: 12, borderBottomWidth: 1, borderBottomColor: '#fcd34d' }}>
           <Text style={{ color: '#92400e', fontSize: 13, textAlign: 'center' }}>
-            Changes are NOT auto-saved. Tap "Save" to store your content before locking.
+            You have unsaved changes. Tap "Save & Lock" to store your content.
           </Text>
         </View>
       )}
