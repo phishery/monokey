@@ -26,7 +26,7 @@ export default function OpenScreen() {
     w?: string;  // encoded write
   }>();
   const router = useRouter();
-  const [status, setStatus] = useState('Opening your locker...');
+  const [status, setStatus] = useState('Opening your vault...');
 
   useEffect(() => {
     // Small delay to ensure router is ready
@@ -96,7 +96,7 @@ export default function OpenScreen() {
         router.replace('/(auth)/home');
       } catch (error) {
         console.error('Open error:', error);
-        setStatus('Error opening locker. Redirecting...');
+        setStatus('Error opening vault. Redirecting...');
         router.replace('/(auth)/home');
       }
     }, 100);

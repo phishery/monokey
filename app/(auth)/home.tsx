@@ -337,12 +337,12 @@ export default function HomeScreen() {
 
           <View style={{ width: '100%', gap: 16 }}>
             <SimpleButton
-              title="Create Monokey Locker"
+              title="Create Monokey Vault"
               variant="primary"
               onPress={handleCreate}
             />
             <SimpleButton
-              title="Open Monokey Locker"
+              title="Open Monokey Vault"
               variant="outline"
               onPress={handleOpen}
             />
@@ -358,7 +358,7 @@ export default function HomeScreen() {
               <View>
                 <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Two Keys, Two Permissions</Text>
                 <Text variant="caption" color="muted">
-                  Each locker gets two separate 12-word keys: a Full Access key (for editing) and a View-Only key (safe to share). Share the View-Only key with others — they can see your content but never modify it.
+                  Each vault gets two separate 12-word keys: a Full Access key (for editing) and a View-Only key (safe to share). Share the View-Only key with others — they can see your content but never modify it.
                 </Text>
               </View>
 
@@ -541,7 +541,7 @@ export default function HomeScreen() {
           <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
             <BackIcon />
           </Pressable>
-          <Text variant="subtitle" className="ml-2">Your Locker Keys</Text>
+          <Text variant="subtitle" className="ml-2">Your Vault Keys</Text>
         </View>
 
         <ScrollView className="flex-1 px-6">
@@ -572,7 +572,7 @@ export default function HomeScreen() {
                     FULL ACCESS KEY (Keep Private!)
                   </Text>
                   <Text variant="caption" color="muted">
-                    Anyone with these 12 words can read AND edit your locker. Never share this key.
+                    Anyone with these 12 words can read AND edit your vault. Never share this key.
                   </Text>
                 </View>
                 <WordGrid words={writeWords} />
@@ -595,7 +595,7 @@ export default function HomeScreen() {
                       const lockerUrl = `${baseUrl}/open?w=${encodeKey(writeWords)}`;
                       if (Platform.OS === 'web') {
                         navigator.clipboard.writeText(lockerUrl).then(() => {
-                          window.alert('Full Access link copied! Keep this private - it allows editing your locker.');
+                          window.alert('Full Access link copied! Keep this private - it allows editing your vault.');
                         }).catch(() => {
                           window.prompt('Copy this link (keep private!):', lockerUrl);
                         });
@@ -631,7 +631,7 @@ export default function HomeScreen() {
                     VIEW-ONLY KEY (Safe to Share)
                   </Text>
                   <Text variant="caption" color="muted">
-                    Share these 12 words to let others view your locker. They cannot make changes.
+                    Share these 12 words to let others view your vault. They cannot make changes.
                   </Text>
                 </View>
                 <WordGrid words={viewWords} />
@@ -654,7 +654,7 @@ export default function HomeScreen() {
                       const lockerUrl = `${baseUrl}/open?v=${encodeKey(viewWords)}`;
                       if (Platform.OS === 'web') {
                         navigator.clipboard.writeText(lockerUrl).then(() => {
-                          window.alert('View-Only link copied! Share this to let others view your locker.');
+                          window.alert('View-Only link copied! Share this to let others view your vault.');
                         }).catch(() => {
                           window.prompt('Copy this link:', lockerUrl);
                         });
@@ -688,7 +688,7 @@ export default function HomeScreen() {
 
           <View style={{ marginTop: 16, marginBottom: 24, gap: 12 }}>
             <SimpleButton
-              title="Open My Locker"
+              title="Open My Vault"
               variant="primary"
               onPress={handleContinue}
             />
@@ -715,7 +715,7 @@ export default function HomeScreen() {
 
       <ScrollView className="flex-1 px-6" keyboardShouldPersistTaps="handled">
         <Text color="muted" className="mb-4">
-          Enter your 12-word seed phrase to unlock your locker.
+          Enter your 12-word seed phrase to unlock your vault.
         </Text>
 
         {/* Hidden div for QR upload scanner */}
@@ -805,7 +805,7 @@ export default function HomeScreen() {
 
         <View className="mt-8 mb-6">
           <Button
-            title="Unlock Locker"
+            title="Unlock Vault"
             variant="primary"
             size="lg"
             onPress={handleUnlock}

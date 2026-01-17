@@ -34,7 +34,7 @@
       "bundler": "metro",
       "name": "Monokey",
       "shortName": "Monokey",
-      "description": "Secure content locker with 12-word seed phrase",
+      "description": "Secure content vault with 12-word seed phrase",
       "backgroundColor": "#ffffff",
       "themeColor": "#ffffff",
       "output": "single",

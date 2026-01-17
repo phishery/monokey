@@ -112,7 +112,7 @@ export default function PrintBackupScreen() {
         }}>
           <Text style={{ fontSize: 12, color: '#92400e', textAlign: 'center', fontWeight: '600' }}>
             Write your words clearly. Store this paper in a secure location.
-            {'\n'}Anyone with these words can access your locker.
+            {'\n'}Anyone with these words can access your vault.
           </Text>
         </View>
 
@@ -130,7 +130,7 @@ export default function PrintBackupScreen() {
               FULL ACCESS KEY (Keep Private!)
             </Text>
             <Text style={{ fontSize: 10, color: '#64748b', textAlign: 'center', marginTop: 2 }}>
-              This key allows reading AND editing your locker
+              This key allows reading AND editing your vault
             </Text>
           </View>
 
@@ -167,7 +167,7 @@ export default function PrintBackupScreen() {
               VIEW-ONLY KEY (Safe to Share)
             </Text>
             <Text style={{ fontSize: 10, color: '#64748b', textAlign: 'center', marginTop: 2 }}>
-              This key allows viewing only - cannot edit your locker
+              This key allows viewing only - cannot edit your vault
             </Text>
           </View>
 

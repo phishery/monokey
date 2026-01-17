@@ -208,7 +208,7 @@ export default function LockerScreen() {
       }
     } catch (error) {
       console.error('Failed to initialize:', error);
-      Alert.alert('Error', 'Failed to initialize locker');
+      Alert.alert('Error', 'Failed to initialize vault');
     } finally {
       setIsLoading(false);
     }
@@ -289,9 +289,9 @@ export default function LockerScreen() {
       setHasUnsavedChanges(false);
 
       if (Platform.OS === 'web') {
-        window.alert('Locker saved successfully!');
+        window.alert('Vault saved successfully!');
       } else {
-        Alert.alert('Saved', 'Your locker has been saved.');
+        Alert.alert('Saved', 'Your vault has been saved.');
       }
     } catch (error) {
       console.error('Failed to save:', error);
@@ -406,7 +406,7 @@ export default function LockerScreen() {
             <BackIcon />
           </Pressable>
           <Text variant="subtitle" className="ml-2">
-            Your Locker
+            Your Vault
           </Text>
           {accessMode === 'view' && (
             <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
@@ -466,7 +466,7 @@ export default function LockerScreen() {
         ) : (
           <TextInput
             className="flex-1 p-6 text-text text-base"
-            placeholder={canEdit ? "Start typing your secure content..." : "This locker is view-only"}
+            placeholder={canEdit ? "Start typing your secure content..." : "This vault is view-only"}
             placeholderTextColor="#64748b"
             value={content}
             onChangeText={canEdit ? setContent : undefined}
