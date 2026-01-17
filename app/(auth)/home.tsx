@@ -306,6 +306,25 @@ export default function HomeScreen() {
                   Your content is encrypted before it leaves your device. We only store encrypted data — without your seed phrase, not even we can read your content.
                 </Text>
               </View>
+
+              <View>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Open Source</Text>
+                <Text variant="caption" color="muted">
+                  Monokey is fully open source. You can verify the code, audit the encryption, or run your own instance.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (Platform.OS === 'web') {
+                      window.open('https://github.com/phishery/monokey', '_blank');
+                    }
+                  }}
+                  style={{ marginTop: 8 }}
+                >
+                  <Text color="primary" variant="caption" style={{ textDecorationLine: 'underline' }}>
+                    View source on GitHub →
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
