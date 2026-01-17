@@ -36,7 +36,18 @@
       "shortName": "Monokey",
       "description": "Secure content locker with 12-word seed phrase",
       "backgroundColor": "#ffffff",
-      "themeColor": "#ffffff"
+      "themeColor": "#ffffff",
+      "output": "single",
+      "head": [
+        {
+          "tag": "link",
+          "attributes": {
+            "rel": "apple-touch-icon",
+            "sizes": "180x180",
+            "href": "/apple-touch-icon.png"
+          }
+        }
+      ]
     },
     "plugins": [
       "expo-router",
