@@ -10,7 +10,7 @@ import { Button } from '../../src/components/ui/Button';
 import { Card } from '../../src/components/ui/Card';
 import { WordGrid } from '../../src/components/key/WordGrid';
 import { WebQRScanner } from '../../src/components/qr/WebQRScanner';
-import { generateMnemonic, validateMnemonic, getWordList } from '../../src/services/bip39';
+import { generateMnemonic, generateDualMnemonic, validateMnemonic, getWordList } from '../../src/services/bip39';
 
 const MonokeyLogo = require('../../assets/monokey.png');
 
@@ -73,6 +73,14 @@ const CopyIcon = () => (
   </Svg>
 );
 
+const PrintIcon = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth={2}>
+    <Path d="M6 9V2h12v7" />
+    <Path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <Path d="M6 14h12v8H6z" />
+  </Svg>
+);
+
 type Mode = 'home' | 'create' | 'enter' | 'scan';
 
 let wordList: string[] = [];
@@ -86,7 +94,8 @@ try {
 export default function HomeScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('home');
-  const [generatedWords, setGeneratedWords] = useState<string[]>([]);
+  const [viewWords, setViewWords] = useState<string[]>([]);
+  const [writeWords, setWriteWords] = useState<string[]>([]);
   const [enteredWords, setEnteredWords] = useState<string[]>(Array(12).fill(''));
   const [activeWordIndex, setActiveWordIndex] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -96,6 +105,48 @@ export default function HomeScreen() {
   const handleScan = () => {
     setScanned(false);
     setMode('scan');
+  };
+
+  // Helper to parse QR data and navigate to locker
+  const parseAndNavigateFromQR = (data: string): boolean => {
+    // Check for view-only key
+    const viewMatch = data.match(/[?&]view=([^&]+)/);
+    if (viewMatch) {
+      const mnemonic = viewMatch[1].replace(/-/g, ' ');
+      if (validateMnemonic(mnemonic)) {
+        router.push({ pathname: '/(auth)/locker', params: { viewMnemonic: mnemonic } });
+        return true;
+      }
+    }
+
+    // Check for write (full access) key
+    const writeMatch = data.match(/[?&]write=([^&]+)/);
+    if (writeMatch) {
+      const mnemonic = writeMatch[1].replace(/-/g, ' ');
+      if (validateMnemonic(mnemonic)) {
+        router.push({ pathname: '/(auth)/locker', params: { writeMnemonic: mnemonic } });
+        return true;
+      }
+    }
+
+    // Legacy: check for old-style key param
+    const keyMatch = data.match(/[?&]key=([^&]+)/);
+    if (keyMatch) {
+      const mnemonic = keyMatch[1].replace(/-/g, ' ');
+      if (validateMnemonic(mnemonic)) {
+        router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
+        return true;
+      }
+    }
+
+    // Try parsing as plain mnemonic
+    const plainMnemonic = data.trim();
+    if (validateMnemonic(plainMnemonic)) {
+      router.push({ pathname: '/(auth)/locker', params: { mnemonic: plainMnemonic } });
+      return true;
+    }
+
+    return false;
   };
 
   const handleUploadQR = async () => {
@@ -114,20 +165,7 @@ export default function HomeScreen() {
           const result = await html5QrCode.scanFile(file, true);
           html5QrCode.clear();
 
-          // Parse the result
-          let mnemonic = '';
-          if (result.includes('/open?key=')) {
-            const match = result.match(/[?&]key=([^&]+)/);
-            if (match) {
-              mnemonic = match[1].replace(/-/g, ' ');
-            }
-          } else {
-            mnemonic = result.trim();
-          }
-
-          if (validateMnemonic(mnemonic)) {
-            router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
-          } else {
+          if (!parseAndNavigateFromQR(result)) {
             window.alert('Invalid QR code. Please upload a valid Monokey QR code.');
           }
         } catch (err) {
@@ -146,23 +184,7 @@ export default function HomeScreen() {
     if (scanned) return;
     setScanned(true);
 
-    let mnemonic = '';
-
-    // Check if it's a URL with key param
-    if (data.includes('/open?key=')) {
-      const match = data.match(/[?&]key=([^&]+)/);
-      if (match) {
-        mnemonic = match[1].replace(/-/g, ' ');
-      }
-    } else {
-      // Assume it's a plain mnemonic
-      mnemonic = data.trim();
-    }
-
-    if (validateMnemonic(mnemonic)) {
-      // Valid - go directly to locker
-      router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
-    } else {
+    if (!parseAndNavigateFromQR(data)) {
       if (Platform.OS === 'web') {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
       } else {
@@ -176,26 +198,28 @@ export default function HomeScreen() {
   const handleCreate = () => {
     console.log('handleCreate called');
     try {
-      console.log('Calling generateMnemonic...');
-      const result = generateMnemonic();
-      console.log('Generated:', result);
-      if (result && result.words && result.words.length === 12) {
-        setGeneratedWords(result.words);
+      console.log('Calling generateDualMnemonic...');
+      const result = generateDualMnemonic();
+      console.log('Generated dual mnemonic:', result);
+      if (result && result.viewWords && result.writeWords &&
+          result.viewWords.length === 12 && result.writeWords.length === 12) {
+        setViewWords(result.viewWords);
+        setWriteWords(result.writeWords);
         setMode('create');
       } else {
         console.error('Invalid result:', result);
         if (Platform.OS === 'web') {
-          window.alert('Failed to generate seed phrase - invalid result');
+          window.alert('Failed to generate seed phrases - invalid result');
         } else {
-          Alert.alert('Error', 'Failed to generate seed phrase');
+          Alert.alert('Error', 'Failed to generate seed phrases');
         }
       }
     } catch (error) {
       console.error('Failed to generate:', error);
       if (Platform.OS === 'web') {
-        window.alert('Failed to generate seed phrase: ' + String(error));
+        window.alert('Failed to generate seed phrases: ' + String(error));
       } else {
-        Alert.alert('Error', 'Failed to generate seed phrase: ' + String(error));
+        Alert.alert('Error', 'Failed to generate seed phrases: ' + String(error));
       }
     }
   };
@@ -249,8 +273,12 @@ export default function HomeScreen() {
   };
 
   const handleContinue = () => {
-    const mnemonic = generatedWords.join(' ');
-    router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
+    const viewMnemonic = viewWords.join(' ');
+    const writeMnemonic = writeWords.join(' ');
+    router.push({
+      pathname: '/(auth)/locker',
+      params: { viewMnemonic, writeMnemonic, isNew: 'true' }
+    });
   };
 
   // Home screen
@@ -272,7 +300,7 @@ export default function HomeScreen() {
             Monokey
           </Text>
           <Text color="muted" className="mt-2 text-center mb-8">
-            Secure your content with a 12-word seed phrase
+            Secure content with dual keys: one to edit, one to share
           </Text>
           </View>
 
@@ -297,16 +325,23 @@ export default function HomeScreen() {
 
             <View style={{ gap: 16 }}>
               <View>
-                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Unguessable Key</Text>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Two Keys, Two Permissions</Text>
                 <Text variant="caption" color="muted">
-                  Your 12-word seed phrase is randomly selected from 2,048 words. There are 5.4 × 10³⁹ possible combinations — more than the number of atoms on Earth. The odds of someone guessing your phrase are essentially zero.
+                  Each locker gets two separate 12-word keys: a Full Access key (for editing) and a View-Only key (safe to share). Share the View-Only key with others — they can see your content but never modify it.
+                </Text>
+              </View>
+
+              <View>
+                <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Unguessable Keys</Text>
+                <Text variant="caption" color="muted">
+                  Each 12-word key is randomly selected from 2,048 words. There are 5.4 × 10³⁹ possible combinations — more than atoms on Earth. The odds of guessing either key are essentially zero.
                 </Text>
               </View>
 
               <View>
                 <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Military-Grade Encryption</Text>
                 <Text variant="caption" color="muted">
-                  Your seed phrase generates a unique cryptographic key using industry-standard algorithms (BIP39, HKDF). This key encrypts your locker content with AES encryption — the same standard used by governments, banks, and Bitcoin.
+                  Your keys generate unique cryptographic keys using industry-standard algorithms (BIP39, HKDF). Content is encrypted with AES — the same standard used by governments, banks, and Bitcoin.
                 </Text>
               </View>
 
@@ -355,23 +390,7 @@ export default function HomeScreen() {
   // Scan screen - QR code scanner (populates words on enter screen)
   if (mode === 'scan') {
     const handleWebScan = (data: string) => {
-      let mnemonic = '';
-
-      // Check if it's a URL with key param
-      if (data.includes('/open?key=')) {
-        const match = data.match(/[?&]key=([^&]+)/);
-        if (match) {
-          mnemonic = match[1].replace(/-/g, ' ');
-        }
-      } else {
-        // Assume it's a plain mnemonic
-        mnemonic = data.trim();
-      }
-
-      if (validateMnemonic(mnemonic)) {
-        // Valid - go directly to locker
-        router.push({ pathname: '/(auth)/locker', params: { mnemonic } });
-      } else {
+      if (!parseAndNavigateFromQR(data)) {
         window.alert('Invalid QR code. Please scan a valid Monokey QR code.');
         setMode('enter');
       }
@@ -475,75 +494,153 @@ export default function HomeScreen() {
     );
   }
 
-  // Create screen - show generated words
+  // Create screen - show generated words (dual keys)
   if (mode === 'create') {
+    const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com';
+
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-row items-center px-4 py-4">
           <Pressable onPress={() => setMode('home')} className="p-2 -ml-2">
             <BackIcon />
           </Pressable>
-          <Text variant="subtitle" className="ml-2">Your Seed Phrase</Text>
+          <Text variant="subtitle" className="ml-2">Your Locker Keys</Text>
         </View>
 
         <ScrollView className="flex-1 px-6">
           <Card className="bg-error/10 mb-6">
             <Text color="error" variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>
-              Write these 12 words down on paper and store them safely.
+              Write these words down on paper and store them safely.
             </Text>
             <Text color="muted" variant="caption">
-              This is the most secure option. Anyone with these words can access your locker. The QR code and link below are convenient but less secure - only use them if you understand the risks.
+              You have TWO keys: a Full Access key (to edit) and a View-Only key (to share with others). Keep your Full Access key private!
             </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/print-backup')}
+              style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <PrintIcon />
+              <Text color="primary" variant="caption" style={{ textDecorationLine: 'underline', fontWeight: '600' }}>
+                Print a backup sheet to write down your keys
+              </Text>
+            </TouchableOpacity>
           </Card>
 
-          {generatedWords.length > 0 ? (
+          {writeWords.length > 0 && viewWords.length > 0 ? (
             <>
-              <WordGrid words={generatedWords} />
-
-              {/* QR Code Section */}
-              <View className="mt-8 items-center">
-                <Text variant="caption" color="muted" className="mb-2 text-center" style={{ fontWeight: '600' }}>
-                  Quick Access (less secure)
-                </Text>
-                <Text variant="caption" color="muted" className="mb-4 text-center">
-                  Screenshot or long-press the QR code to save it
-                </Text>
-                <View id="qr-container" className="bg-white p-4 rounded-xl">
-                  <QRCode
-                    value={`${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`}
-                    size={200}
-                    backgroundColor="white"
-                    color="black"
-                  />
+              {/* Full Access Key Section */}
+              <View style={{ marginBottom: 32 }}>
+                <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 14, marginBottom: 4 }}>
+                    FULL ACCESS KEY (Keep Private!)
+                  </Text>
+                  <Text variant="caption" color="muted">
+                    Anyone with these 12 words can read AND edit your locker. Never share this key.
+                  </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    const lockerUrl = `${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`;
-                    if (Platform.OS === 'web') {
-                      navigator.clipboard.writeText(lockerUrl).then(() => {
-                        window.alert('Link copied! Share this link to give someone access to your locker.');
-                      }).catch(() => {
-                        window.prompt('Copy this link:', lockerUrl);
-                      });
-                    } else {
-                      Alert.alert('Copy Link', lockerUrl);
-                    }
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 10,
-                    paddingHorizontal: 20,
-                    backgroundColor: '#f1f5f9',
-                    borderRadius: 8,
-                    marginTop: 12,
-                    gap: 8,
-                  }}
-                >
-                  <CopyIcon />
-                  <Text color="primary" variant="caption">Copy Link</Text>
-                </TouchableOpacity>
+                <WordGrid words={writeWords} />
+
+                {/* Full Access QR Code */}
+                <View className="mt-6 items-center">
+                  <View style={{ backgroundColor: '#fef2f2', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
+                    <Text style={{ color: '#dc2626', fontSize: 11, fontWeight: '600' }}>FULL ACCESS QR</Text>
+                  </View>
+                  <View className="bg-white p-4 rounded-xl" style={{ borderWidth: 2, borderColor: '#fecaca' }}>
+                    <QRCode
+                      value={`${baseUrl}/open?write=${writeWords.join('-')}`}
+                      size={160}
+                      backgroundColor="white"
+                      color="black"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const lockerUrl = `${baseUrl}/open?write=${writeWords.join('-')}`;
+                      if (Platform.OS === 'web') {
+                        navigator.clipboard.writeText(lockerUrl).then(() => {
+                          window.alert('Full Access link copied! Keep this private - it allows editing your locker.');
+                        }).catch(() => {
+                          window.prompt('Copy this link (keep private!):', lockerUrl);
+                        });
+                      } else {
+                        Alert.alert('Full Access Link', lockerUrl);
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 8,
+                      paddingHorizontal: 16,
+                      backgroundColor: '#fef2f2',
+                      borderRadius: 8,
+                      marginTop: 8,
+                      gap: 6,
+                    }}
+                  >
+                    <CopyIcon />
+                    <Text style={{ color: '#dc2626', fontSize: 12 }}>Copy Full Access Link</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: '#e2e8f0', marginVertical: 16 }} />
+
+              {/* View-Only Key Section */}
+              <View style={{ marginBottom: 24 }}>
+                <View style={{ backgroundColor: '#f0fdf4', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                  <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 14, marginBottom: 4 }}>
+                    VIEW-ONLY KEY (Safe to Share)
+                  </Text>
+                  <Text variant="caption" color="muted">
+                    Share these 12 words to let others view your locker. They cannot make changes.
+                  </Text>
+                </View>
+                <WordGrid words={viewWords} />
+
+                {/* View-Only QR Code */}
+                <View className="mt-6 items-center">
+                  <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 4, marginBottom: 8 }}>
+                    <Text style={{ color: '#16a34a', fontSize: 11, fontWeight: '600' }}>VIEW-ONLY QR</Text>
+                  </View>
+                  <View className="bg-white p-4 rounded-xl" style={{ borderWidth: 2, borderColor: '#bbf7d0' }}>
+                    <QRCode
+                      value={`${baseUrl}/open?view=${viewWords.join('-')}`}
+                      size={160}
+                      backgroundColor="white"
+                      color="black"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const lockerUrl = `${baseUrl}/open?view=${viewWords.join('-')}`;
+                      if (Platform.OS === 'web') {
+                        navigator.clipboard.writeText(lockerUrl).then(() => {
+                          window.alert('View-Only link copied! Share this to let others view your locker.');
+                        }).catch(() => {
+                          window.prompt('Copy this link:', lockerUrl);
+                        });
+                      } else {
+                        Alert.alert('View-Only Link', lockerUrl);
+                      }
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 8,
+                      paddingHorizontal: 16,
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: 8,
+                      marginTop: 8,
+                      gap: 6,
+                    }}
+                  >
+                    <CopyIcon />
+                    <Text style={{ color: '#16a34a', fontSize: 12 }}>Copy View-Only Link</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </>
           ) : (
@@ -552,7 +649,7 @@ export default function HomeScreen() {
             </View>
           )}
 
-          <View style={{ marginTop: 32, marginBottom: 24, gap: 12 }}>
+          <View style={{ marginTop: 16, marginBottom: 24, gap: 12 }}>
             <SimpleButton
               title="Open My Locker"
               variant="primary"

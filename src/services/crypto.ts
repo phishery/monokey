@@ -210,3 +210,36 @@ export async function hashString(input: string): Promise<string> {
     input
   );
 }
+
+/**
+ * Generate a random content key (256 bits)
+ */
+export async function generateContentKey(): Promise<Uint8Array> {
+  return await generateRandomBytes(32);
+}
+
+/**
+ * Encrypt a key with another key (for storing content key encrypted with user's key)
+ */
+export async function encryptKey(
+  keyToEncrypt: Uint8Array,
+  encryptionKey: Uint8Array
+): Promise<{ encryptedKey: string; iv: string }> {
+  const iv = await generateIV();
+  const ivBytes = base64ToUint8Array(iv);
+  const keyString = uint8ArrayToBase64(keyToEncrypt);
+  const encrypted = await encrypt(keyString, encryptionKey, ivBytes);
+  return { encryptedKey: encrypted, iv };
+}
+
+/**
+ * Decrypt a key with another key
+ */
+export async function decryptKey(
+  encryptedKey: string,
+  decryptionKey: Uint8Array,
+  iv: Uint8Array
+): Promise<Uint8Array> {
+  const keyString = await decrypt(encryptedKey, decryptionKey, iv);
+  return base64ToUint8Array(keyString);
+}

@@ -8,6 +8,13 @@ export interface GeneratedMnemonic {
   wordCount: WordCount;
 }
 
+export interface DualMnemonic {
+  viewMnemonic: string;
+  viewWords: string[];
+  writeMnemonic: string;
+  writeWords: string[];
+}
+
 /**
  * Generate cryptographically secure random bytes (works on web and native)
  */
@@ -63,6 +70,20 @@ export function generateMnemonic(): GeneratedMnemonic {
       wordCount: 12,
     };
   }
+}
+
+/**
+ * Generate dual mnemonics for view/write access
+ */
+export function generateDualMnemonic(): DualMnemonic {
+  const view = generateMnemonic();
+  const write = generateMnemonic();
+  return {
+    viewMnemonic: view.mnemonic,
+    viewWords: view.words,
+    writeMnemonic: write.mnemonic,
+    writeWords: write.words,
+  };
 }
 
 /**
