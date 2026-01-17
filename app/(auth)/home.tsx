@@ -445,7 +445,6 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       if (Platform.OS === 'web') {
-                        // Find the SVG inside qr-container
                         const container = document.getElementById('qr-container');
                         const svg = container?.querySelector('svg');
                         if (svg) {
@@ -458,14 +457,29 @@ export default function HomeScreen() {
                           img.onload = () => {
                             ctx?.drawImage(img, 0, 0, 200, 200);
                             const pngUrl = canvas.toDataURL('image/png');
-                            const link = document.createElement('a');
-                            link.download = 'monokey-qr.png';
-                            link.href = pngUrl;
-                            link.click();
+
+                            // Check if mobile (iOS Safari blocks downloads)
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            if (isMobile) {
+                              // Open image in new tab - user can long-press to save
+                              const newTab = window.open();
+                              if (newTab) {
+                                newTab.document.write(`<html><head><title>Monokey QR</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;"><img src="${pngUrl}" style="max-width:90vw;"/></body></html>`);
+                                newTab.document.close();
+                              } else {
+                                window.alert('Long-press on the QR code above to save it.');
+                              }
+                            } else {
+                              // Desktop - trigger download
+                              const link = document.createElement('a');
+                              link.download = 'monokey-qr.png';
+                              link.href = pngUrl;
+                              link.click();
+                            }
                           };
                           img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
                         } else {
-                          window.alert('Could not find QR code. Try right-clicking and saving the image.');
+                          window.alert('Long-press on the QR code to save it.');
                         }
                       } else {
                         Alert.alert('Save QR', 'Take a screenshot to save the QR code');
@@ -478,7 +492,7 @@ export default function HomeScreen() {
                       borderRadius: 8,
                     }}
                   >
-                    <Text color="primary" variant="caption">Download QR</Text>
+                    <Text color="primary" variant="caption">Save QR</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
