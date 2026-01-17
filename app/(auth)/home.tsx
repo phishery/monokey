@@ -419,8 +419,11 @@ export default function HomeScreen() {
 
         <ScrollView className="flex-1 px-6">
           <Card className="bg-error/10 mb-6">
-            <Text color="error" variant="caption">
-              Write these 12 words down and store them safely. Anyone with these words can access your locker.
+            <Text color="error" variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>
+              Write these 12 words down on paper and store them safely.
+            </Text>
+            <Text color="muted" variant="caption">
+              This is the most secure option. Anyone with these words can access your locker. The QR code and link below are convenient but less secure - only use them if you understand the risks.
             </Text>
           </Card>
 
@@ -430,8 +433,11 @@ export default function HomeScreen() {
 
               {/* QR Code Section */}
               <View className="mt-8 items-center">
+                <Text variant="caption" color="muted" className="mb-2 text-center" style={{ fontWeight: '600' }}>
+                  Quick Access (less secure)
+                </Text>
                 <Text variant="caption" color="muted" className="mb-4 text-center">
-                  Save this QR code - scan it to instantly open your locker
+                  Screenshot or long-press the QR code to save it
                 </Text>
                 <View id="qr-container" className="bg-white p-4 rounded-xl">
                   <QRCode
@@ -441,87 +447,34 @@ export default function HomeScreen() {
                     color="black"
                   />
                 </View>
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (Platform.OS === 'web') {
-                        const container = document.getElementById('qr-container');
-                        const svg = container?.querySelector('svg');
-                        if (svg) {
-                          const svgData = new XMLSerializer().serializeToString(svg);
-                          const canvas = document.createElement('canvas');
-                          canvas.width = 200;
-                          canvas.height = 200;
-                          const ctx = canvas.getContext('2d');
-                          const img = new Image();
-                          img.onload = () => {
-                            ctx?.drawImage(img, 0, 0, 200, 200);
-                            const pngUrl = canvas.toDataURL('image/png');
-
-                            // Check if mobile (iOS Safari blocks downloads)
-                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            if (isMobile) {
-                              // Open image in new tab - user can long-press to save
-                              const newTab = window.open();
-                              if (newTab) {
-                                newTab.document.write(`<html><head><title>Monokey QR</title></head><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;"><img src="${pngUrl}" style="max-width:90vw;"/></body></html>`);
-                                newTab.document.close();
-                              } else {
-                                window.alert('Long-press on the QR code above to save it.');
-                              }
-                            } else {
-                              // Desktop - trigger download
-                              const link = document.createElement('a');
-                              link.download = 'monokey-qr.png';
-                              link.href = pngUrl;
-                              link.click();
-                            }
-                          };
-                          img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-                        } else {
-                          window.alert('Long-press on the QR code to save it.');
-                        }
-                      } else {
-                        Alert.alert('Save QR', 'Take a screenshot to save the QR code');
-                      }
-                    }}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 16,
-                      backgroundColor: '#f1f5f9',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text color="primary" variant="caption">Save QR</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      const lockerUrl = `${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`;
-                      if (Platform.OS === 'web') {
-                        navigator.clipboard.writeText(lockerUrl).then(() => {
-                          window.alert('Link copied! Share this with anyone to give them access to your locker.');
-                        }).catch(() => {
-                          window.prompt('Copy this link:', lockerUrl);
-                        });
-                      } else {
-                        Alert.alert('Copy Link', lockerUrl);
-                      }
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 8,
-                      paddingHorizontal: 16,
-                      backgroundColor: '#f1f5f9',
-                      borderRadius: 8,
-                      gap: 6,
-                    }}
-                  >
-                    <CopyIcon />
-                    <Text color="primary" variant="caption">Copy Link</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    const lockerUrl = `${Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com'}/open?key=${generatedWords.join('-')}`;
+                    if (Platform.OS === 'web') {
+                      navigator.clipboard.writeText(lockerUrl).then(() => {
+                        window.alert('Link copied! Share this link to give someone access to your locker.');
+                      }).catch(() => {
+                        window.prompt('Copy this link:', lockerUrl);
+                      });
+                    } else {
+                      Alert.alert('Copy Link', lockerUrl);
+                    }
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: 8,
+                    marginTop: 12,
+                    gap: 8,
+                  }}
+                >
+                  <CopyIcon />
+                  <Text color="primary" variant="caption">Copy Link</Text>
+                </TouchableOpacity>
               </View>
             </>
           ) : (
