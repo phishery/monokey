@@ -20,13 +20,13 @@ const UPSTASH_URL = 'https://legible-cheetah-40701.upstash.io';
 const UPSTASH_TOKEN = 'AZ79AAIncDJkNjdhM2Q2ODgxMjE0YjZjOTljNjZkMDEzMjVkMTRkY3AyNDA3MDE';
 
 const BackIcon = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth={2}>
     <Path d="m15 18-6-6 6-6" />
   </Svg>
 );
 
 const LockIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth={2}>
     <Path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z" />
     <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </Svg>

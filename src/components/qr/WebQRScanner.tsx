@@ -61,7 +61,7 @@ export function WebQRScanner({ onScan, onError }: WebQRScannerProps) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: '#f1f5f9' }}>
       <div
         id="qr-reader"
         style={{

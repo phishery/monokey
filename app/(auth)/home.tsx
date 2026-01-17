@@ -43,7 +43,7 @@ const SimpleButton = ({ onPress, title, variant = 'primary' }: { onPress: () => 
 
 
 const BackIcon = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#f8fafc" strokeWidth={2}>
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth={2}>
     <Path d="m15 18-6-6 6-6" />
   </Svg>
 );
@@ -258,7 +258,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center px-6">
-          <Image source={MonokeyLogo} style={{ width: 120, height: 120 }} resizeMode="contain" />
+          <Image source={MonokeyLogo} style={{ width: 200, height: 200 }} resizeMode="contain" />
           <Text variant="title" className="mt-6 text-center">
             Monokey
           </Text>
@@ -474,7 +474,7 @@ export default function HomeScreen() {
                     style={{
                       paddingVertical: 8,
                       paddingHorizontal: 16,
-                      backgroundColor: '#1e293b',
+                      backgroundColor: '#f1f5f9',
                       borderRadius: 8,
                     }}
                   >
@@ -499,7 +499,7 @@ export default function HomeScreen() {
                       alignItems: 'center',
                       paddingVertical: 8,
                       paddingHorizontal: 16,
-                      backgroundColor: '#1e293b',
+                      backgroundColor: '#f1f5f9',
                       borderRadius: 8,
                       gap: 6,
                     }}
@@ -564,7 +564,7 @@ export default function HomeScreen() {
               paddingVertical: 12,
               paddingHorizontal: 16,
               borderRadius: 12,
-              backgroundColor: '#1e293b',
+              backgroundColor: '#f1f5f9',
               gap: 8,
             }}
           >
@@ -585,7 +585,7 @@ export default function HomeScreen() {
               paddingVertical: 12,
               paddingHorizontal: 16,
               borderRadius: 12,
-              backgroundColor: '#1e293b',
+              backgroundColor: '#f1f5f9',
               gap: 8,
             }}
           >
