@@ -1,2 +1,5 @@
 node_modules/
 lockers.json
+.env
+.env.*
+!.env.example

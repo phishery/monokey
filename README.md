@@ -96,9 +96,67 @@ for easy scanning by others.
 
 ⸻
 
+🔧 Development Setup
+
+Prerequisites
+• Node.js 18+
+• npm or yarn
+
+1. Clone and Install
+
+```bash
+git clone https://github.com/phishery/monokey.git
+cd monokey
+npm install
+```
+
+2. Set Up Environment Variables
+
+Frontend (Expo app):
+```bash
+cp .env.example .env
+# Edit .env and set EXPO_PUBLIC_API_URL to your backend URL
+```
+
+Backend (API server):
+```bash
+cd server
+npm install
+cp .env.example .env
+# Edit .env and set your Upstash credentials (see below)
+```
+
+3. Get Upstash Credentials
+
+• Sign up at https://console.upstash.com/
+• Create a Redis database
+• Copy the REST URL and REST Token
+• Add them to `server/.env`:
+  ```
+  UPSTASH_URL=https://your-instance.upstash.io
+  UPSTASH_TOKEN=your_token_here
+  ```
+
+4. Run Locally
+
+```bash
+# Terminal 1: Start the API server
+cd server && npm start
+
+# Terminal 2: Start the Expo app
+npm run web  # or: npx expo start
+```
+
+⚠️ SECURITY: Never commit secrets!
+• All API credentials must be set via environment variables
+• The frontend NEVER contains API tokens - it calls the backend
+• For production, set env vars in your hosting platform (Render, Vercel, etc.)
+
+⸻
+
 🙌 Contributing
 
-We welcome contributions!  
+We welcome contributions!
 Please open issues or pull requests for:
 
 • Feature enhancements  

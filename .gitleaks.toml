@@ -1,0 +1,36 @@
+# Gitleaks configuration for Monokey
+
+title = "Monokey Secret Scanning"
+
+[allowlist]
+description = "Global allowlist"
+paths = [
+    '''node_modules''',
+    '''\.env\.example$''',
+    '''package-lock\.json$''',
+]
+
+# Custom rules for Upstash tokens
+[[rules]]
+id = "upstash-token"
+description = "Upstash REST API Token"
+regex = '''(?i)upstash[_-]?token\s*[:=]\s*['"]?[A-Za-z0-9+/=]{40,}['"]?'''
+tags = ["api", "upstash"]
+
+[[rules]]
+id = "upstash-url"
+description = "Upstash REST URL with identifier"
+regex = '''https://[a-z]+-[a-z]+-\d+\.upstash\.io'''
+tags = ["api", "upstash"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(api[_-]?key|apikey|api_secret)\s*[:=]\s*['"]?[A-Za-z0-9+/=]{20,}['"]?'''
+tags = ["api", "generic"]
+
+[[rules]]
+id = "bearer-token"
+description = "Bearer Token in code"
+regex = '''Bearer\s+[A-Za-z0-9+/=]{20,}'''
+tags = ["api", "bearer"]

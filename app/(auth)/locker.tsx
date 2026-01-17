@@ -18,9 +18,8 @@ import {
 } from '../../src/services/crypto';
 import { sha256 } from '@noble/hashes/sha2.js';
 
-// Upstash Redis REST API
-const UPSTASH_URL = 'https://legible-cheetah-40701.upstash.io';
-const UPSTASH_TOKEN = 'AZ79AAIncDJkNjdhM2Q2ODgxMjE0YjZjOTljNjZkMDEzMjVkMTRkY3AyNDA3MDE';
+// API endpoint - uses backend server (never expose Upstash credentials to client)
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://monokey-api.onrender.com';
 
 const BackIcon = () => (
   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth={2}>
@@ -125,9 +124,7 @@ export default function LockerScreen() {
         setUserKey(key);
 
         // Try to fetch as write locker first
-        const writeResponse = await fetch(`${UPSTASH_URL}/get/write:${lockerId}`, {
-          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-        });
+        const writeResponse = await fetch(`${API_URL}/api/locker/write/${lockerId}`);
         const writeData = await writeResponse.json();
 
         if (writeData.result) {
@@ -154,9 +151,7 @@ export default function LockerScreen() {
           setOriginalContent(decryptedContent);
         } else {
           // Try as view locker
-          const viewResponse = await fetch(`${UPSTASH_URL}/get/view:${lockerId}`, {
-            headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-          });
+          const viewResponse = await fetch(`${API_URL}/api/locker/view/${lockerId}`);
           const viewData = await viewResponse.json();
 
           if (viewData.result) {
@@ -174,9 +169,7 @@ export default function LockerScreen() {
             setContentKey(decryptedContentKey);
 
             // Fetch actual content from write locker
-            const contentResponse = await fetch(`${UPSTASH_URL}/get/write:${viewRefData.writeRef}`, {
-              headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
-            });
+            const contentResponse = await fetch(`${API_URL}/api/locker/write/${viewRefData.writeRef}`);
             const contentData = await contentResponse.json();
 
             if (contentData.result) {
@@ -236,9 +229,10 @@ export default function LockerScreen() {
           viewLockerId,
         };
 
-        await fetch(`${UPSTASH_URL}/set/write:${writeLockerId}/${encodeURIComponent(JSON.stringify(writeLockerData))}`, {
+        await fetch(`${API_URL}/api/locker/write/${writeLockerId}`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: JSON.stringify(writeLockerData) }),
         });
 
         // Store view reference
@@ -249,9 +243,10 @@ export default function LockerScreen() {
           encryptedContentKey: viewEncryptedKey,
         };
 
-        await fetch(`${UPSTASH_URL}/set/view:${viewLockerId}/${encodeURIComponent(JSON.stringify(viewRefData))}`, {
+        await fetch(`${API_URL}/api/locker/view/${viewLockerId}`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: JSON.stringify(viewRefData) }),
         });
 
         setAccessMode('write');
@@ -268,9 +263,10 @@ export default function LockerScreen() {
           viewLockerId: viewLockerId || undefined,
         };
 
-        await fetch(`${UPSTASH_URL}/set/write:${writeLockerId}/${encodeURIComponent(JSON.stringify(writeLockerData))}`, {
+        await fetch(`${API_URL}/api/locker/write/${writeLockerId}`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` },
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: JSON.stringify(writeLockerData) }),
         });
       }
 
