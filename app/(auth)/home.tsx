@@ -386,7 +386,7 @@ export default function HomeScreen() {
               <View>
                 <Text variant="caption" style={{ fontWeight: '600', marginBottom: 4 }}>Zero-Knowledge Storage</Text>
                 <Text variant="caption" color="muted">
-                  Your content is encrypted before it leaves your device. We only store encrypted data — without your seed phrase, not even we can read your content.
+                  Your 12-word seed phrase never leaves your device — all encryption happens locally. We only store encrypted data, so without your seed phrase, not even we can read your content.
                 </Text>
               </View>
 
