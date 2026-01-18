@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView, Modal, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import QRCode from 'react-native-qrcode-svg';
 import { Text } from '../../src/components/ui/Text';
 import { mnemonicToSeed } from '../../src/services/bip39';
 import {
@@ -34,6 +35,28 @@ const LockIcon = () => (
   </Svg>
 );
 
+const ShareIcon = ({ color = "#0ea5e9" }: { color?: string }) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+    <Path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+    <Path d="M16 6l-4-4-4 4" />
+    <Path d="M12 2v13" />
+  </Svg>
+);
+
+const CopyIcon = ({ color = "#0ea5e9" }: { color?: string }) => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+    <Path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <Path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
+  </Svg>
+);
+
+const CloseIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth={2}>
+    <Path d="M18 6L6 18" />
+    <Path d="M6 6l12 12" />
+  </Svg>
+);
+
 type AccessMode = 'write' | 'view' | 'new';
 
 interface LockerData {
@@ -52,6 +75,15 @@ interface ViewRefData {
   encryptedContentKey: string;
 }
 
+// Encode mnemonic to URL-safe base64
+const encodeKey = (mnemonicStr: string) => {
+  if (Platform.OS === 'web') {
+    return btoa(mnemonicStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  // For native, use a simple encoding
+  return Buffer.from(mnemonicStr).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
 export default function LockerScreen() {
   const params = useLocalSearchParams<{
     mnemonic?: string;
@@ -60,6 +92,8 @@ export default function LockerScreen() {
     isNew?: string;
   }>();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWideScreen = width >= 900;
 
   const [content, setContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
@@ -71,6 +105,7 @@ export default function LockerScreen() {
   const [viewLockerId, setViewLockerId] = useState<string | null>(null);
   const [userKey, setUserKey] = useState<Uint8Array | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Determine which mnemonic we're working with
   const mnemonic = params.mnemonic || params.writeMnemonic;
@@ -397,6 +432,130 @@ export default function LockerScreen() {
 
   const canEdit = accessMode === 'write' || accessMode === 'new';
 
+  // Generate share URLs
+  const baseUrl = Platform.OS === 'web' ? window.location.origin : 'https://monokey.onrender.com';
+  const writeMnemonicStr = params.writeMnemonic || params.mnemonic || '';
+  const viewMnemonicStr = params.viewMnemonic || '';
+
+  const writeUrl = writeMnemonicStr ? `${baseUrl}/open?w=${encodeKey(writeMnemonicStr)}` : '';
+  const viewUrl = viewMnemonicStr ? `${baseUrl}/open?v=${encodeKey(viewMnemonicStr)}` : '';
+
+  const copyToClipboard = (text: string, label: string) => {
+    if (Platform.OS === 'web') {
+      navigator.clipboard.writeText(text).then(() => {
+        window.alert(`${label} copied to clipboard!`);
+      }).catch(() => {
+        window.prompt(`Copy this ${label}:`, text);
+      });
+    } else {
+      Alert.alert('Copied', `${label} copied to clipboard`);
+    }
+  };
+
+  // Share Panel Component (used in both modal and side rail)
+  const SharePanel = ({ inModal = false }: { inModal?: boolean }) => (
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: '#f8fafc',
+        borderLeftWidth: inModal ? 0 : 1,
+        borderLeftColor: '#e2e8f0',
+      }}
+      contentContainerStyle={{ padding: 20 }}
+    >
+      {inModal && (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <Text variant="subtitle">Share Vault</Text>
+          <Pressable onPress={() => setShowShareModal(false)} style={{ padding: 4 }}>
+            <CloseIcon />
+          </Pressable>
+        </View>
+      )}
+
+      {!inModal && (
+        <Text variant="subtitle" style={{ marginBottom: 16 }}>Share Vault</Text>
+      )}
+
+      {/* Full Access Section - only show if we have write mnemonic */}
+      {writeMnemonicStr && canEdit && (
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ backgroundColor: '#fef2f2', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+            <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+              FULL ACCESS (Keep Private!)
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ backgroundColor: 'white', padding: 12, borderRadius: 12, borderWidth: 2, borderColor: '#fecaca' }}>
+              <QRCode value={writeUrl} size={120} backgroundColor="white" color="black" />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => copyToClipboard(writeUrl, 'Full Access link')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 10,
+              backgroundColor: '#fef2f2',
+              borderRadius: 8,
+              gap: 6,
+            }}
+          >
+            <CopyIcon color="#dc2626" />
+            <Text style={{ color: '#dc2626', fontSize: 13, fontWeight: '600' }}>Copy Full Access Link</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* View-Only Section - only show if we have view mnemonic */}
+      {viewMnemonicStr && (
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ backgroundColor: '#f0fdf4', padding: 10, borderRadius: 8, marginBottom: 12 }}>
+            <Text style={{ color: '#16a34a', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+              VIEW-ONLY (Safe to Share)
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ backgroundColor: 'white', padding: 12, borderRadius: 12, borderWidth: 2, borderColor: '#bbf7d0' }}>
+              <QRCode value={viewUrl} size={120} backgroundColor="white" color="black" />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => copyToClipboard(viewUrl, 'View-Only link')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 10,
+              backgroundColor: '#f0fdf4',
+              borderRadius: 8,
+              gap: 6,
+            }}
+          >
+            <CopyIcon color="#16a34a" />
+            <Text style={{ color: '#16a34a', fontSize: 13, fontWeight: '600' }}>Copy View-Only Link</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Info text */}
+      <View style={{ backgroundColor: '#f1f5f9', padding: 12, borderRadius: 8 }}>
+        <Text style={{ color: '#64748b', fontSize: 11, textAlign: 'center' }}>
+          {canEdit
+            ? "Share the View-Only link to let others see your content without editing."
+            : "You have view-only access to this vault."}
+        </Text>
+      </View>
+    </ScrollView>
+  );
+
+  // Check if we have any shareable links
+  const hasShareableLinks = writeMnemonicStr || viewMnemonicStr;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
@@ -420,6 +579,20 @@ export default function LockerScreen() {
             <Text variant="caption" color="muted">
               Saving...
             </Text>
+          )}
+          {/* Share button - only on mobile/narrow screens */}
+          {hasShareableLinks && !isWideScreen && (
+            <Pressable
+              onPress={() => setShowShareModal(true)}
+              style={{
+                backgroundColor: '#f1f5f9',
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 8,
+              }}
+            >
+              <ShareIcon />
+            </Pressable>
           )}
           {canEdit && (
             <Pressable
@@ -454,31 +627,57 @@ export default function LockerScreen() {
         </View>
       )}
 
-      {/* Editor */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Text color="muted">Unlocking...</Text>
+      {/* Main content area with optional side rail */}
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {/* Editor */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          {isLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Text color="muted">Unlocking...</Text>
+            </View>
+          ) : (
+            <TextInput
+              style={{
+                flex: 1,
+                padding: 24,
+                fontSize: 16,
+                textAlignVertical: 'top',
+                backgroundColor: !canEdit ? '#f8fafc' : undefined,
+              }}
+              placeholder={canEdit ? "Start typing your secure content..." : "This vault is view-only"}
+              placeholderTextColor="#64748b"
+              value={content}
+              onChangeText={canEdit ? setContent : undefined}
+              editable={canEdit}
+              multiline
+              autoCapitalize="sentences"
+              autoCorrect
+            />
+          )}
+        </KeyboardAvoidingView>
+
+        {/* Side rail for wide screens */}
+        {isWideScreen && hasShareableLinks && (
+          <View style={{ width: 280 }}>
+            <SharePanel />
           </View>
-        ) : (
-          <TextInput
-            className="flex-1 p-6 text-text text-base"
-            placeholder={canEdit ? "Start typing your secure content..." : "This vault is view-only"}
-            placeholderTextColor="#64748b"
-            value={content}
-            onChangeText={canEdit ? setContent : undefined}
-            editable={canEdit}
-            multiline
-            textAlignVertical="top"
-            autoCapitalize="sentences"
-            autoCorrect
-            style={!canEdit ? { backgroundColor: '#f8fafc' } : undefined}
-          />
         )}
-      </KeyboardAvoidingView>
+      </View>
+
+      {/* Share Modal for mobile/narrow screens */}
+      <Modal
+        visible={showShareModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+          <SharePanel inModal />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
