@@ -348,8 +348,15 @@ export default function HomeScreen() {
             />
           </View>
 
-          {/* How it works section */}
+          {/* Why Privacy Matters */}
           <View style={{ marginTop: 48, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#e2e8f0' }}>
+            <Text variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: 8, fontWeight: '600' }}>
+              Why Privacy Matters
+            </Text>
+            <Text variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: 24 }}>
+              Your private thoughts, passwords, and sensitive information deserve protection that doesn't rely on trusting a company. With Monokey, you hold the only keys — literally.
+            </Text>
+
             <Text variant="caption" color="muted" style={{ textAlign: 'center', marginBottom: 16, fontWeight: '600' }}>
               How Monokey Works
             </Text>
@@ -391,13 +398,13 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   onPress={() => {
                     if (Platform.OS === 'web') {
-                      window.open('https://github.com/phishery/monokey', '_blank');
+                      window.open('https://github.com/phishery/monokey#readme', '_blank');
                     }
                   }}
                   style={{ marginTop: 8 }}
                 >
                   <Text color="primary" variant="caption" style={{ textDecorationLine: 'underline' }}>
-                    View source on GitHub →
+                    Learn more on GitHub →
                   </Text>
                 </TouchableOpacity>
               </View>
